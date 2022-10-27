@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyaddict"
-version = "0.9.0"
+version = "0.9.1"
 authors = [
   { name="dxstiny", email="dxstiny.gh@gmail.com" },
 ]
@@ -21,3 +21,9 @@ classifiers = [
 [project.urls]
 "Homepage" = "https://github.com/dxstiny/pyaddict"
 "Bug Tracker" = "https://github.com/dxstiny/pyaddict/issues"
+
+[classifiers]
+"Typing :: Typed" = "True"
+
+[package]
+include = ["py.typed"]
