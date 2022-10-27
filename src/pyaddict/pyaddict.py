@@ -52,7 +52,7 @@ class JDict(JObject):
             if isinstance(value, type_):
                 return value
             return None
-        except:
+        except: # pylint: disable=bare-except
             return None
 
     def tryGet(self, key: str, type_: Type[T]) -> Optional[T]:
@@ -156,7 +156,7 @@ class JList(JArray):
             if isinstance(value, type_):
                 return value
             return None
-        except:
+        except: # pylint: disable=bare-except
             return None
 
     def tryGet(self, index: int, type_: Type[T]) -> Optional[T]:
@@ -198,7 +198,8 @@ class JList(JArray):
         if the index does not exist, the default value is returned
         if the index exists but is not the specified type, the value is cast to the specified type
 
-        Usage: you don't know if the index exists, you don't care if it's the specified type & you want a default value
+        Usage: you don't know if the index exists, you don't care if it's the specified type &
+        you want a default value
         """
         try:
             return type_(self._data[index]) # type: ignore
@@ -236,7 +237,8 @@ class JListIterator(JArray):
 
     def assertGet(self, type_: Type[T]) -> List[T]:
         """
-        iterates over the list & asserts each value is the specified type (which is usually the case for arrays)
+        iterates over the list & asserts each value is the specified type
+        (which is usually the case for arrays)
 
         Usage: you know the values are the specified type
         """
