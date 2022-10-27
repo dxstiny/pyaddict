@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyaddict"
+version = "0.9.0"
+authors = [
+  { name="dxstiny", email="dxstiny.gh@gmail.com" },
+]
+description = "yet another dict library"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/dxstiny/pyaddict"
+"Bug Tracker" = "https://github.com/dxstiny/pyaddict/issues"
