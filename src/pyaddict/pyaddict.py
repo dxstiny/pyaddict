@@ -4,7 +4,7 @@ from __future__ import annotations
 __copyright__ = ("Copyright (c) 2022 https://github.com/dxstiny")
 
 import json
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from pyaddict.types import JArray, JObject
 
@@ -15,7 +15,7 @@ __all__ = ["JDict", "JList", "JListIterator"]
 
 class JDict(JObject):
     """dict extractor"""
-    def __init__(self, data: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, data: Optional[JObject] = None) -> None:
         self._data = data or { }
         super().__init__(self._data)
 
@@ -40,7 +40,7 @@ class JDict(JObject):
 
     def optionalGet(self, key: str, type_: Type[T]) -> Optional[T]:
         """
-        tries to get the key & cast to the specified type
+        tries to get the key
 
         if the key does not exist, None is returned
         if the key exists but is not the specified type, None is returned
@@ -118,10 +118,16 @@ class JDict(JObject):
             return JDict(value)
         return JDict()
 
+    def chain(self) -> JChain:
+        """
+        equivalent to js optional chaining
+        """
+        return JChain(jdict = self)
+
 
 class JList(JArray):
     """list extractor"""
-    def __init__(self, data: Optional[List[Any]] = None) -> None:
+    def __init__(self, data: Optional[JArray] = None) -> None:
         self._data = data or [ ]
         super().__init__(self._data)
 
@@ -144,7 +150,7 @@ class JList(JArray):
 
     def optionalGet(self, index: int, type_: Type[T]) -> Optional[T]:
         """
-        tries to get the index & cast to the specified type
+        tries to get the index
 
         if the index does not exist, None is returned
         if the index exists but is not the specified type, None is returned
@@ -228,6 +234,12 @@ class JList(JArray):
             return JList(value)
         return JList()
 
+    def chain(self) -> JChain:
+        """
+        equivalent to js optional chaining
+        """
+        return JChain(jlist = self)
+
 
 class JListIterator(JArray):
     """list iterator"""
@@ -246,7 +258,7 @@ class JListIterator(JArray):
 
     def optionalGet(self, type_: Type[T]) -> List[Optional[T]]:
         """
-        iterates over the list & tries to cast each value to the specified type
+        iterates over the list & tries to get each with the specified type
 
         Usage: you don't know if the values are the specified type
         """
@@ -275,3 +287,157 @@ class JListIterator(JArray):
         Usage: you don't know if the values are the specified type & you want a default value
         """
         return [ self._data.ensureCast(i, type_, default) for i, _ in enumerate(self._data) ]
+
+
+class JChain:
+    """optional chaining"""
+    def __init__(self,
+                 jdict: Optional[JDict] = None,
+                 jlist: Optional[JList] = None) -> None:
+
+        if jdict is None and jlist is None:
+            raise Exception("JChain requires either a JDict or JList")
+
+        if jdict is not None:
+            self._jdict = jdict
+            self._jlist = None
+
+        if jlist is not None:
+            self._jdict = None
+            self._jlist = jlist
+
+    class ChainLink:
+        def __init__(self, key: str) -> None:
+            self._key = key
+            self._optional = False
+            self._index = False
+
+            if key.endswith("?"):
+                key = key[:-1]
+                self._optional = True
+            if key.startswith("[") and key.endswith("]"):
+                key = int(key[1:-1])
+                self._index = True
+
+            self._key = key
+
+        def __repr__(self) -> str:
+            return f"ChainLink({self._key}, optional={self._optional}, index={self._index})"
+
+        def isOptional(self) -> bool:
+            return False
+
+        @property
+        def key(self) -> str:
+            return self._key
+
+        @property
+        def optional(self) -> bool:
+            return self._optional
+
+        @property
+        def index(self) -> bool:
+            return self._index
+
+    def _isDict(self) -> bool:
+        return bool(self._jdict)
+
+    def _isList(self) -> bool:
+        return bool(self._jlist)
+
+    def _createChainLink(self, chain: str) -> List[JChain.ChainLink]:
+        return [ JChain.ChainLink(key) for key in chain.split(".") ]
+
+    def _prepare(self, chain: str) -> Optional[Tuple[Union[JDict, JList], str]]:
+        chain = self._createChainLink(chain)
+        last = chain.pop()
+        value = self._jdict if self._isDict() else self._jlist
+        for link in chain:
+            if link.optional:
+                if link.index and link.key >= len(list(value)):
+                    return None
+                if not link.index and link.key not in value:
+                    return None
+            value = value[link.key]
+        return (JList(value) if last.index else JDict(value), last.key)
+
+    def assertGet(self, chain: str, type_: Type[T]) -> Optional[T]:
+        """
+        asserts the chain resolves & is the specified type
+
+        if any key does not exist, an exception is raised
+        if the chain resolves but is not the specified type, an exception is raised
+
+        raises AssertionError
+
+        Usage: you know the chain resolves & is the specified type
+        """
+        value = self._prepare(chain)
+        assert value is not None
+        obj, last = value
+        returnValue = obj.assertGet(last, type_)
+        return returnValue
+
+    def optionalGet(self, chain: str, type_: Type[T]) -> Optional[T]:
+        """
+        tries to resolve the chain
+
+        if any key does not exist, None is returned
+        if the chain resolves but is not the specified type, None is returned
+
+        Usage: you don't know if the chain resolves
+        """
+        value = self._prepare(chain)
+        if value is None:
+            return None
+        obj, last = value
+        returnValue = obj.optionalGet(last, type_)
+        return returnValue
+
+    def tryGet(self, chain: str, type_: Type[T]) -> Optional[T]:
+        """
+        tries to resolve the chain
+
+        if any key does not exist, None is returned
+        if the chain resolves but is not the specified type, None is returned
+
+        Usage: you don't know if the chain resolves
+        """
+        value = self._prepare(chain)
+        if value is None:
+            return None
+        obj, last = value
+        returnValue = obj.tryGet(last, type_)
+        return returnValue
+
+    def ensure(self, chain: str, type_: Type[T], default: Optional[T] = None) -> T:
+        """
+        tries to resolve the chain
+
+        if any key does not exist, the default value is returned
+        if the chain resolves but is not the specified type, the default value is returned
+
+        Usage: you don't know if the chain resolves
+        """
+        value = self._prepare(chain)
+        if value is None:
+            return default
+        obj, last = value
+        returnValue = obj.ensure(last, type_, default)
+        return returnValue
+
+    def ensureCast(self, chain: str, type_: Type[T], default: Optional[T] = None) -> T:
+        """
+        tries to resolve the chain
+
+        if any key does not exist, the default value is returned
+        if the chain resolves but is not the specified type, the default value is returned
+
+        Usage: you don't know if the chain resolves
+        """
+        value = self._prepare(chain)
+        if value is None:
+            return default
+        obj, last = value
+        returnValue = obj.ensureCast(last, type_, default)
+        return returnValue
