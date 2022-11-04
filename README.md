@@ -5,7 +5,7 @@
 [![PyPI license](https://img.shields.io/pypi/l/pyaddict.svg)](https://pypi.python.org/pypi/pyaddict/)
 
 ## Description
-Yet another python library to safely work with json data. It implements many useful features such as default values, type casting and safe indexing.
+Yet another python library to safely work with json data. It implements many useful features such as optional chaining, type casting, safe indexing and default values.
 
 ## Installation
 ```bash
@@ -25,23 +25,33 @@ jdict = JDict({
     ]
 })
 
-# Get value
-print(jdict.ensureCast("name", str))  # John
-print(jdict.ensureCast("age", int))  # 30
+# dicts
+print(jdict.ensure("name", str))  # John
+print(jdict.ensure("age", int))  # 30
+print(jdict.ensure("age", str))  # ""
 print(jdict.ensureCast("age", str))  # "30"
 print(jdict.optionalGet("age", str)) # None
-print(jdict.tryGet("age", str))  # "30"
+print(jdict.optionalCast("age", str))  # "30"
 print(jdict.optionalGet("gender", str)) # None
-print(jdict.tryGet("gender", str)) # None
+print(jdict.optionalCast("gender", str)) # None
 print(jdict.ensure("gender", str)) # ""
 
+# lists
 cars = jdict.ensureCast("cars", JList)
-print(cars.ensureCast(0, JDict).ensureCast("mpg", str))  # "27.5"
-print(cars.ensureCast(1, JDict).ensureCast("mpg", str))  # "24.1"
-print(cars.ensureCast(2, JDict).ensureCast("mpg", str))  # ""
+print(cars.assertGet(1, dict))  # {'model': 'Ford Edge', 'mpg': 24.1}
+print(cars.assertGet(2, dict))  # AssertionError
 
-print(cars.ensureCast(2, JDict).optionalGet("mpg", str))  # None
-print(cars.assertGet(2, JDict))  # AssertionError
+# iterators
+for car in cars.iterator().ensureCast(JDict):
+    print(car.ensureCast("model", str)) # BMW 230, Ford Edge
+
+# chaining
+chain = jdict.chain()
+print(chain.ensureCast("cars.[1].mpg", str))  # "24.1"
+print(chain.ensureCast("cars.[2].mpg", str))  # ""
+# or via direct access (returns Optional[Any]!)
+print(chain["cars.[2].mpg"])  # IndexError
+print(chain["cars.[2]?.mpg"])  # None
 ```
 
 The library is fully typed and thus can be used with mypy & pylint. Check out the [wiki](https://github.com/dxstiny/pyaddict/wiki) for more information.

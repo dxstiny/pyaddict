@@ -22,6 +22,20 @@ dictionary: JObject = {
         "floatvalue": 2.0,
         "boolvalue": True,
         "listvalue": [2, 3, 4],
+        "dictlist": [
+            {
+                "stringvalue": "value3",
+                "intvalue": 3,
+                "floatvalue": 3.0,
+                "boolvalue": True,
+            },
+            {
+                "stringvalue": "value4",
+                "intvalue": 4,
+                "floatvalue": 4.0,
+                "boolvalue": True,
+            },
+        ],
     }
 }
 
@@ -36,12 +50,12 @@ class TestAllDict(unittest.TestCase):
         self.assertEqual(jdict.assertGet("boolvalue", bool), True)
         self.assertEqual(jdict.assertGet("listvalue", list), [1, 2, 3])
 
-    def test_tryGet(self) -> None:
-        self.assertEqual(jdict.tryGet("stringvalue", str), "value1")
-        self.assertEqual(jdict.tryGet("intvalue", int), 1)
-        self.assertEqual(jdict.tryGet("floatvalue", float), 1.0)
-        self.assertEqual(jdict.tryGet("boolvalue", bool), True)
-        self.assertEqual(jdict.tryGet("listvalue", list), [1, 2, 3])
+    def test_optionalCast(self) -> None:
+        self.assertEqual(jdict.optionalCast("stringvalue", str), "value1")
+        self.assertEqual(jdict.optionalCast("intvalue", int), 1)
+        self.assertEqual(jdict.optionalCast("floatvalue", float), 1.0)
+        self.assertEqual(jdict.optionalCast("boolvalue", bool), True)
+        self.assertEqual(jdict.optionalCast("listvalue", list), [1, 2, 3])
 
     def test_ensure(self) -> None:
         self.assertEqual(jdict.ensure("stringvalue", str), "value1")
@@ -76,7 +90,7 @@ class TestAllDict(unittest.TestCase):
 
 
 class TestUseCases(unittest.TestCase):
-    def test_usecase1(self) -> None:
+    def test_usecase_dict(self) -> None:
         self.assertIsInstance(jdict.ensure("intAsString", int), int)
         self.assertEqual(jdict.ensure("intAsString", int), 0)
 
@@ -85,11 +99,11 @@ class TestUseCases(unittest.TestCase):
 
         self.assertRaises(AssertionError, jdict.assertGet, "intAsString", int)
 
-        self.assertEqual(jdict.tryGet("intAsString", int), 5)
+        self.assertEqual(jdict.optionalCast("intAsString", int), 5)
 
         self.assertIsNone(jdict.optionalGet("intAsString", int))
 
-    def test_usecase2(self) -> None:
+    def test_usecase_list(self) -> None:
         jlist = jdict.ensureCast("listvalue", JList)
         self.assertEqual(len(jlist), 3)
 
@@ -98,10 +112,10 @@ class TestUseCases(unittest.TestCase):
         self.assertEqual(jlist.assertGet(2, int), 3)
         self.assertRaises(AssertionError, jlist.assertGet, 3, int)
 
-        self.assertEqual(jlist.tryGet(0, int), 1)
-        self.assertEqual(jlist.tryGet(1, int), 2)
-        self.assertEqual(jlist.tryGet(2, int), 3)
-        self.assertIsNone(jlist.tryGet(3, int))
+        self.assertEqual(jlist.optionalCast(0, int), 1)
+        self.assertEqual(jlist.optionalCast(1, int), 2)
+        self.assertEqual(jlist.optionalCast(2, int), 3)
+        self.assertIsNone(jlist.optionalCast(3, int))
 
         self.assertEqual(jlist.ensure(0, int), 1)
         self.assertEqual(jlist.ensure(1, int), 2)
@@ -122,10 +136,21 @@ class TestUseCases(unittest.TestCase):
         self.assertEqual(jlist.iterator().ensureCast(str), ["1", "2", "3"])
         self.assertEqual(jlist.iterator().assertGet(int), [1, 2, 3])
         self.assertRaises(AssertionError, jlist.iterator().assertGet, str)
-        self.assertEqual(jlist.iterator().tryGet(int), [1, 2, 3])
-        self.assertEqual(jlist.iterator().tryGet(str), [None, None, None])
+        self.assertEqual(jlist.iterator().optionalCast(int), [1, 2, 3])
+        self.assertEqual(jlist.iterator().optionalCast(str), [None, None, None])
         self.assertEqual(jlist.iterator().optionalGet(int), [1, 2, 3])
         self.assertEqual(jlist.iterator().optionalGet(str), [None, None, None])
+
+    def test_chaining(self) -> None:
+        chain = jdict.chain()
+        self.assertEqual(chain.ensureCast("dictvalue.listvalue", JList)
+                              .iterator()
+                              .ensure(int),
+                         [2, 3, 4])
+        self.assertEqual(chain.ensureCast("dictvalue.listvalue.[0]", int), 2)
+        self.assertIsNone(chain.optionalGet("dictvalue.dictlist.[2]", dict))
+        self.assertRaises(IndexError, chain.__getitem__, "dictvalue.dictlist.[2].value") # []
+        self.assertIsNone(chain.optionalGet("dictvalue.dictlist.[2]?.stringvalue", str))
 
     def test_serialise(self) -> None:
         self.assertIsInstance(jdict.toString(), str)

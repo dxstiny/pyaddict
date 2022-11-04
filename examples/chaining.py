@@ -17,15 +17,13 @@ adventurer = {
 }
 chain = JDict(adventurer).chain()
 
-print(chain.assertGet("cat?.name", str)) # Dinah
 print(chain.optionalGet("dog?.name", str)) # None
-print(chain.assertGet("animals?.[0]?.name", str)) # Dinah
 print(chain.optionalGet("pets?.[1]?.name", str)) # None
 
 print(chain.optionalGet("animals?.[1]?.name", int)) # None
-print(chain.tryGet("animals?.[1]?.name", str)) # Rabbit
+print(chain.optionalCast("animals?.[1]?.name", str)) # Rabbit
 print(chain.optionalGet("animals?.[1]?.ages", int)) # None
-print(chain.tryGet("animals?.[1]?.ages", int)) # 2
+print(chain.optionalCast("animals?.[1]?.ages", int)) # 2
 
 print(chain.ensure("animals?.[1]?.type", int)) # 0
 print(chain.ensure("animals?.[1]?.ages", int)) # 0
@@ -40,3 +38,8 @@ animals = chain.ensureCast("animals", JList).chain()
 print(animals.ensure("[1]?.name", str)) # Rabbit
 print(animals.ensure("[1]?.age", int)) # 0
 print(animals.ensureCast("[1]?.age", int)) # 2
+
+print(animals["[1].name"]) # Rabbit
+print(animals["[1].age"]) # 2
+print(animals["[2].ages"]) # IndexError
+print(animals["[2]?.ages"]) # None
