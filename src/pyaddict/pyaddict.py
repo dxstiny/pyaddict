@@ -4,7 +4,7 @@ from __future__ import annotations
 __copyright__ = ("Copyright (c) 2022 https://github.com/dxstiny")
 
 import json
-from typing import Any, List, Optional, Tuple, Type, TypeVar, Union, overload
+from typing import Any, List, Optional, SupportsIndex, Tuple, Type, TypeVar, Union, overload
 
 from pyaddict.types import JArray, JObject
 from pyaddict.interfaces.common import ICommon, IExtended
@@ -325,7 +325,7 @@ class _ChainLink:
         return f"ChainLink({self._key}, optional={self._optional}, index={self._index})"
 
     @property
-    def key(self) -> Union[str, int]:
+    def key(self) -> SupportsIndex:
         """returns the key"""
         return self._key
 
@@ -375,24 +375,29 @@ class JChain(ICommon):
 
     def _prepare(self,
                  chain: str,
-                 preventException = False) -> Optional[Tuple[IExtended, Union[str, int]]]:
+                 preventException: bool = False) -> Optional[Tuple[IExtended, SupportsIndex]]:
         """
         prepares the chain for execution
 
         returns None if the chain is invalid
         else, returns (parent, last_key)
         """
-        chain: List[_ChainLink] = self._createChainLinks(chain)
-        last = chain.pop()
-        value = self._jdict if self._isDict() else self._jlist
-        for link in chain:
+        links = self._createChainLinks(chain)
+        last = links.pop()
+        value: Union[dict, list] = self._jdict if self._isDict() else self._jlist
+        for link in links:
             if preventException or link.optional:
                 if link.index and link.key >= len(list(value)): # jlist
                     return None # couldn't resolve
                 if not link.index and link.key not in value: # jdict
                     return None # couldn't resolve
             value = value[link.key]
-        return (JList(value) if last.index else JDict(value), last.key)
+
+        if last.index and isinstance(value, list):
+            return JList(value), last.key
+        if not last.index and isinstance(value, dict):
+            return JDict(value), last.key
+        return JDict(), last.key
 
     def resolve(self, chain: str) -> Any:
         """

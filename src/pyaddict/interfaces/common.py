@@ -42,10 +42,14 @@ class IExtended(ICommon):
 
     @overload
     @abstractmethod
-    def get(self, index: int) -> Optional[Any]: ...
+    def get(self, index: Union[str, int]) -> Optional[Any]: ...
     @overload
     @abstractmethod
-    def get(self, index: int, default: T = None) -> Union[Any, T]: ...
+    def get(self, index: Union[str, int], default: T = None) -> Union[Any, T]: ...
     @abstractmethod
     def get(self, key: Union[str, int], default: T = None) -> Union[T, Any]:
         """get exception safe value"""
+
+    @abstractmethod
+    def __getitem__(self, key: Union[str, int]) -> Any:
+        """indexable"""
