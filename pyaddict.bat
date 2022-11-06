@@ -7,11 +7,12 @@ echo %arg%
 
 if /i "%command%" == "build" goto build
 if /i "%command%" == "push" goto push
+if /i "%command%" == "lint" goto lint
 if /i "%command%" == "" goto build
 
 :lint
 python3 -m pylint src/pyaddict
-python3 -m mypy .
+python3 -m mypy src/pyaddict
 exit
 
 :build

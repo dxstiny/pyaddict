@@ -4,16 +4,17 @@ from __future__ import annotations
 __copyright__ = ("Copyright (c) 2022 https://github.com/dxstiny")
 
 import json
-from typing import Any, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, List, Optional, Tuple, Type, TypeVar, Union, overload
 
 from pyaddict.types import JArray, JObject
+from pyaddict.interfaces.common import ICommon, IExtended
 
 T = TypeVar("T")
 
 __all__ = ["JDict", "JList", "JListIterator"]
 
 
-class JDict(JObject):
+class JDict(JObject, IExtended):
     """dict extractor"""
     def __init__(self, data: Optional[JObject] = None) -> None:
         self._data = data or { }
@@ -125,7 +126,7 @@ class JDict(JObject):
         return JChain(jdict = self)
 
 
-class JList(JArray):
+class JList(JArray, IExtended):
     """list extractor"""
     def __init__(self, data: Optional[JArray] = None) -> None:
         self._data = data or [ ]
@@ -134,7 +135,12 @@ class JList(JArray):
     def __bool__(self) -> bool:
         return bool(self._data)
 
-    def get(self, index: int) -> Optional[Any]:
+    @overload
+    def get(self, index: int) -> Optional[Any]: ...
+    @overload
+    def get(self, index: int, default: Optional[T] = None) -> Union[Any, T]: ... # pylint: disable=arguments-differ
+
+    def get(self, index: int, default: Optional[T] = None) -> Union[Any, T]: # pylint: disable=arguments-differ
         """
         returns the value at the specified index
 
@@ -142,9 +148,9 @@ class JList(JArray):
         """
         if index < len(self._data):
             return self._data[index]
-        return None
+        return default
 
-    def assertGet(self, index: int, type_: Type[T]) -> T:
+    def assertGet(self, index: int, type_: Type[T]) -> T: # pylint: disable=arguments-renamed
         """
         asserts the index exists & is the specified type
 
@@ -158,7 +164,7 @@ class JList(JArray):
         assert isinstance(val, type_)
         return val
 
-    def optionalGet(self, index: int, type_: Type[T]) -> Optional[T]:
+    def optionalGet(self, index: int, type_: Type[T]) -> Optional[T]: # pylint: disable=arguments-renamed
         """
         tries to get the index
 
@@ -175,7 +181,7 @@ class JList(JArray):
         except: # pylint: disable=bare-except
             return None
 
-    def optionalCast(self, index: int, type_: Type[T]) -> Optional[T]:
+    def optionalCast(self, index: int, type_: Type[T]) -> Optional[T]: # pylint: disable=arguments-renamed
         """
         tries to get the index & cast to the specified type
 
@@ -188,7 +194,7 @@ class JList(JArray):
         except: # pylint: disable=bare-except
             return None
 
-    def ensure(self, index: int, type_: Type[T], default: Optional[T] = None) -> T:
+    def ensure(self, index: int, type_: Type[T], default: Optional[T] = None) -> T: # pylint: disable=arguments-renamed
         """
         ensures the index exists & is the specified type
 
@@ -207,7 +213,7 @@ class JList(JArray):
         except: # pylint: disable=bare-except
             return default or type_()
 
-    def ensureCast(self, index: int, type_: Type[T], default: Optional[T] = None) -> T:
+    def ensureCast(self, index: int, type_: Type[T], default: Optional[T] = None) -> T: # pylint: disable=arguments-renamed
         """
         ensures the index exists & is the specified type
 
@@ -251,13 +257,13 @@ class JList(JArray):
         return JChain(jlist = self)
 
 
-class JListIterator(JArray):
+class JListIterator(JArray, ICommon):
     """list iterator"""
     def __init__(self, data: JList) -> None:
         self._data = data
         super().__init__(self._data)
 
-    def assertGet(self, type_: Type[T]) -> List[T]:
+    def assertGet(self, type_: Type[T]) -> List[T]: # pylint: disable=arguments-differ
         """
         iterates over the list & asserts each value is the specified type
         (which is usually the case for arrays)
@@ -266,7 +272,7 @@ class JListIterator(JArray):
         """
         return [ self._data.assertGet(i, type_) for i, _ in enumerate(self._data) ]
 
-    def optionalGet(self, type_: Type[T]) -> List[Optional[T]]:
+    def optionalGet(self, type_: Type[T]) -> List[Optional[T]]: # pylint: disable=arguments-differ
         """
         iterates over the list & tries to get each with the specified type
 
@@ -274,7 +280,7 @@ class JListIterator(JArray):
         """
         return [ self._data.optionalGet(i, type_) for i, _ in enumerate(self._data) ]
 
-    def optionalCast(self, type_: Type[T]) -> List[Optional[T]]:
+    def optionalCast(self, type_: Type[T]) -> List[Optional[T]]: # pylint: disable=arguments-differ
         """
         iterates over the list & tries to cast each value to the specified type
 
@@ -282,7 +288,7 @@ class JListIterator(JArray):
         """
         return [ self._data.optionalGet(i, type_) for i, _ in enumerate(self._data) ]
 
-    def ensure(self, type_: Type[T], default: Optional[T] = None) -> List[T]:
+    def ensure(self, type_: Type[T], default: Optional[T] = None) -> List[T]: # pylint: disable=arguments-differ
         """
         iterates over the list & ensures each value is the specified type
 
@@ -290,7 +296,7 @@ class JListIterator(JArray):
         """
         return [ self._data.ensure(i, type_, default) for i, _ in enumerate(self._data) ]
 
-    def ensureCast(self, type_: Type[T], default: Optional[T] = None) -> List[T]:
+    def ensureCast(self, type_: Type[T], default: Optional[T] = None) -> List[T]: # pylint: disable=arguments-differ
         """
         iterates over the list & ensures each value is the specified type
 
@@ -299,7 +305,52 @@ class JListIterator(JArray):
         return [ self._data.ensureCast(i, type_, default) for i, _ in enumerate(self._data) ]
 
 
-class JChain:
+class _ChainLink:
+    """chain link"""
+    def __init__(self, key: str) -> None:
+        self._key: Union[str, int] = key
+        self._optional = False
+        self._index = False
+
+        if key.endswith("?"):
+            self._key = key[:-1]
+            self._optional = True
+        if key.startswith("[") and key.endswith("]"):
+            self._key = int(key[1:-1])
+            self._index = True
+
+    def __repr__(self) -> str:
+        return f"ChainLink({self._key}, optional={self._optional}, index={self._index})"
+
+    @property
+    def key(self) -> Union[str, int]:
+        """returns the key"""
+        return self._key
+
+    @property
+    def intKey(self) -> int:
+        """returns the key as an int"""
+        assert isinstance(self._key, int)
+        return self._key
+
+    @property
+    def strKey(self) -> str:
+        """returns the key as a string"""
+        assert isinstance(self._key, str)
+        return self._key
+
+    @property
+    def optional(self) -> bool:
+        """returns true if the link is optional"""
+        return self._optional
+
+    @property
+    def index(self) -> bool:
+        """returns true if the link is an index"""
+        return self._index
+
+
+class JChain(ICommon):
     """optional chaining"""
     def __init__(self,
                  jdict: Optional[JDict] = None,
@@ -308,46 +359,8 @@ class JChain:
         if jdict is None and jlist is None:
             raise Exception("JChain requires either a JDict or JList")
 
-        if jdict is not None:
-            self._jdict = jdict
-            self._jlist = None
-
-        if jlist is not None:
-            self._jdict = None
-            self._jlist = jlist
-
-    class ChainLink:
-        def __init__(self, key: str) -> None:
-            self._key = key
-            self._optional = False
-            self._index = False
-
-            if key.endswith("?"):
-                key = key[:-1]
-                self._optional = True
-            if key.startswith("[") and key.endswith("]"):
-                key = int(key[1:-1])
-                self._index = True
-
-            self._key = key
-
-        def __repr__(self) -> str:
-            return f"ChainLink({self._key}, optional={self._optional}, index={self._index})"
-
-        def isOptional(self) -> bool:
-            return False
-
-        @property
-        def key(self) -> str:
-            return self._key
-
-        @property
-        def optional(self) -> bool:
-            return self._optional
-
-        @property
-        def index(self) -> bool:
-            return self._index
+        self._jdict: Optional[JDict] = jdict
+        self._jlist: Optional[JList] = jlist
 
     def _isDict(self) -> bool:
         return bool(self._jdict)
@@ -355,11 +368,11 @@ class JChain:
     def _isList(self) -> bool:
         return bool(self._jlist)
 
-    def _createChainLinks(self, chain: str) -> List[JChain.ChainLink]:
-        return [ JChain.ChainLink(key) for key in chain.split(".") ]
+    def _createChainLinks(self, chain: str) -> List[_ChainLink]: # pylint: disable=no-self-use
+        return [ _ChainLink(key) for key in chain.split(".") ]
 
-    def __getitem__(self, __name: str) -> Any:
-        value = self._prepare(__name)
+    def __getitem__(self, name: str) -> Any:
+        value = self._prepare(name)
         if value is None:
             return None
         parent, key = value
@@ -367,24 +380,38 @@ class JChain:
 
     def _prepare(self,
                  chain: str,
-                 preventException = False) -> Optional[Tuple[Union[JDict, JList], str]]:
+                 preventException: bool = False) -> Optional[Tuple[IExtended, Union[str, int]]]:
         """
         prepares the chain for execution
 
         returns None if the chain is invalid
         else, returns (parent, last_key)
         """
-        chain = self._createChainLinks(chain)
-        last = chain.pop()
-        value = self._jdict if self._isDict() else self._jlist
-        for link in chain:
+        links = self._createChainLinks(chain)
+        last = links.pop()
+        nullable: Optional[Union[JObject, JArray]] = self._jdict if self._isDict() else self._jlist
+
+        assert nullable is not None
+
+        value = nullable
+
+        for link in links:
             if preventException or link.optional:
-                if link.index and link.key >= len(list(value)): # jlist
+                if link.index and link.intKey >= len(list(value)): # jlist
                     return None # couldn't resolve
-                if not link.index and link.key not in value: # jdict
+                if not link.index and link.strKey not in value: # jdict
                     return None # couldn't resolve
-            value = value[link.key]
-        return (JList(value) if last.index else JDict(value), last.key)
+            if isinstance(value, (JDict, dict)):
+                value = value[link.strKey]
+                continue
+            assert isinstance(value, (JList, list))
+            value = value[link.intKey]
+
+        if last.index and isinstance(value, list):
+            return JList(value), last.key
+        if not last.index and isinstance(value, dict):
+            return JDict(value), last.key
+        return JDict(), last.key
 
     def resolve(self, chain: str) -> Any:
         """
@@ -395,10 +422,11 @@ class JChain:
         value = self._prepare(chain)
         if value is None:
             raise KeyError(f"invalid chain: {chain}")
-        parent, key = value
-        return parent[key]
+        parent, last = value
+        assert isinstance(last, (int, str))
+        return parent[last]
 
-    def optionalGet(self, chain: str, type_: Type[T]) -> Optional[T]:
+    def optionalGet(self, chain: str, type_: Type[T]) -> Optional[T]: # pylint: disable=arguments-renamed
         """
         tries to resolve the chain
 
@@ -411,9 +439,10 @@ class JChain:
         if value is None:
             return None
         obj, last = value
+        assert isinstance(last, (int, str))
         return obj.optionalGet(last, type_)
 
-    def optionalCast(self, chain: str, type_: Type[T]) -> Optional[T]:
+    def optionalCast(self, chain: str, type_: Type[T]) -> Optional[T]: # pylint: disable=arguments-renamed
         """
         tries to resolve the chain
 
@@ -426,9 +455,10 @@ class JChain:
         if value is None:
             return None
         obj, last = value
+        assert isinstance(last, (int, str))
         return obj.optionalCast(last, type_)
 
-    def ensure(self, chain: str, type_: Type[T], default: Optional[T] = None) -> T:
+    def ensure(self, chain: str, type_: Type[T], default: Optional[T] = None) -> T: # pylint: disable=arguments-renamed
         """
         tries to resolve the chain
 
@@ -441,9 +471,10 @@ class JChain:
         if value is None:
             return default or type_()
         obj, last = value
+        assert isinstance(last, (int, str))
         return obj.ensure(last, type_, default)
 
-    def ensureCast(self, chain: str, type_: Type[T], default: Optional[T] = None) -> T:
+    def ensureCast(self, chain: str, type_: Type[T], default: Optional[T] = None) -> T: # pylint: disable=arguments-renamed
         """
         tries to resolve the chain
 
@@ -456,4 +487,5 @@ class JChain:
         if value is None:
             return default or type_()
         obj, last = value
+        assert isinstance(last, (int, str))
         return obj.ensureCast(last, type_, default)

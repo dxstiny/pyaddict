@@ -1,0 +1,27 @@
+name: mypy
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Install dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        pip3 install mypy
+    - name: Analysing...
+      id: main
+      working-directory: ./
+      run: |
+        mypy src/pyaddict
+      continue-on-error: false
