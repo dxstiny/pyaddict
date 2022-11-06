@@ -138,9 +138,9 @@ class JList(JArray, IExtended):
     @overload
     def get(self, index: int) -> Optional[Any]: ...
     @overload
-    def get(self, index: int, default: T = None) -> Union[Any, T]: ...
+    def get(self, index: int, default: T = None) -> Union[Any, T]: ... # pylint: disable=arguments-differ
 
-    def get(self, index: int, default: T = None) -> Union[Any, T]:
+    def get(self, index: int, default: T = None) -> Union[Any, T]: # pylint: disable=arguments-differ
         """
         returns the value at the specified index
 
@@ -257,7 +257,7 @@ class JList(JArray, IExtended):
         return JChain(jlist = self)
 
 
-class JListIterator(JArray, IExtended):
+class JListIterator(JArray, ICommon):
     """list iterator"""
     def __init__(self, data: JList) -> None:
         self._data = data
@@ -363,7 +363,7 @@ class JChain(ICommon):
     def _isList(self) -> bool:
         return bool(self._jlist)
 
-    def _createChainLinks(self, chain: str) -> List[_ChainLink]:
+    def _createChainLinks(self, chain: str) -> List[_ChainLink]: # pylint: disable=no-self-use
         return [ _ChainLink(key) for key in chain.split(".") ]
 
     def __getitem__(self, name: str) -> Any:
