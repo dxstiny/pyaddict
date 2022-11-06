@@ -4,7 +4,7 @@ from __future__ import annotations
 __copyright__ = ("Copyright (c) 2022 https://github.com/dxstiny")
 
 import json
-from typing import Any, List, Optional, SupportsIndex, Tuple, Type, TypeVar, Union, overload
+from typing import Any, List, Optional, Tuple, Type, TypeVar, Union, overload
 
 from pyaddict.types import JArray, JObject
 from pyaddict.interfaces.common import ICommon, IExtended
@@ -138,9 +138,9 @@ class JList(JArray, IExtended):
     @overload
     def get(self, index: int) -> Optional[Any]: ...
     @overload
-    def get(self, index: int, default: T = None) -> Union[Any, T]: ... # pylint: disable=arguments-differ
+    def get(self, index: int, default: Optional[T] = None) -> Union[Any, T]: ... # pylint: disable=arguments-differ
 
-    def get(self, index: int, default: T = None) -> Union[Any, T]: # pylint: disable=arguments-differ
+    def get(self, index: int, default: Optional[T] = None) -> Union[Any, T]: # pylint: disable=arguments-differ
         """
         returns the value at the specified index
 
@@ -308,25 +308,35 @@ class JListIterator(JArray, ICommon):
 class _ChainLink:
     """chain link"""
     def __init__(self, key: str) -> None:
-        self._key = key
+        self._key: Union[str, int] = key
         self._optional = False
         self._index = False
 
         if key.endswith("?"):
-            key = key[:-1]
+            self._key = key[:-1]
             self._optional = True
         if key.startswith("[") and key.endswith("]"):
-            key = int(key[1:-1])
+            self._key = int(key[1:-1])
             self._index = True
-
-        self._key = key
 
     def __repr__(self) -> str:
         return f"ChainLink({self._key}, optional={self._optional}, index={self._index})"
 
     @property
-    def key(self) -> SupportsIndex:
+    def key(self) -> Union[str, int]:
         """returns the key"""
+        return self._key
+
+    @property
+    def intKey(self) -> int:
+        """returns the key as an int"""
+        assert isinstance(self._key, int)
+        return self._key
+
+    @property
+    def strKey(self) -> str:
+        """returns the key as a string"""
+        assert isinstance(self._key, str)
         return self._key
 
     @property
@@ -349,13 +359,8 @@ class JChain(ICommon):
         if jdict is None and jlist is None:
             raise Exception("JChain requires either a JDict or JList")
 
-        if jdict is not None:
-            self._jdict = jdict
-            self._jlist = None
-
-        if jlist is not None:
-            self._jdict = None
-            self._jlist = jlist
+        self._jdict: Optional[JDict] = jdict
+        self._jlist: Optional[JList] = jlist
 
     def _isDict(self) -> bool:
         return bool(self._jdict)
@@ -375,7 +380,7 @@ class JChain(ICommon):
 
     def _prepare(self,
                  chain: str,
-                 preventException: bool = False) -> Optional[Tuple[IExtended, SupportsIndex]]:
+                 preventException: bool = False) -> Optional[Tuple[IExtended, Union[str, int]]]:
         """
         prepares the chain for execution
 
@@ -384,14 +389,23 @@ class JChain(ICommon):
         """
         links = self._createChainLinks(chain)
         last = links.pop()
-        value: Union[dict, list] = self._jdict if self._isDict() else self._jlist
+        nullable: Optional[Union[JObject, JArray]] = self._jdict if self._isDict() else self._jlist
+
+        assert nullable is not None
+
+        value = nullable
+
         for link in links:
             if preventException or link.optional:
-                if link.index and link.key >= len(list(value)): # jlist
+                if link.index and link.intKey >= len(list(value)): # jlist
                     return None # couldn't resolve
-                if not link.index and link.key not in value: # jdict
+                if not link.index and link.strKey not in value: # jdict
                     return None # couldn't resolve
-            value = value[link.key]
+            if isinstance(value, (JDict, dict)):
+                value = value[link.strKey]
+                continue
+            assert isinstance(value, (JList, list))
+            value = value[link.intKey]
 
         if last.index and isinstance(value, list):
             return JList(value), last.key
@@ -408,8 +422,9 @@ class JChain(ICommon):
         value = self._prepare(chain)
         if value is None:
             raise KeyError(f"invalid chain: {chain}")
-        parent, key = value
-        return parent[key]
+        parent, last = value
+        assert isinstance(last, (int, str))
+        return parent[last]
 
     def optionalGet(self, chain: str, type_: Type[T]) -> Optional[T]: # pylint: disable=arguments-renamed
         """
@@ -424,6 +439,7 @@ class JChain(ICommon):
         if value is None:
             return None
         obj, last = value
+        assert isinstance(last, (int, str))
         return obj.optionalGet(last, type_)
 
     def optionalCast(self, chain: str, type_: Type[T]) -> Optional[T]: # pylint: disable=arguments-renamed
@@ -439,6 +455,7 @@ class JChain(ICommon):
         if value is None:
             return None
         obj, last = value
+        assert isinstance(last, (int, str))
         return obj.optionalCast(last, type_)
 
     def ensure(self, chain: str, type_: Type[T], default: Optional[T] = None) -> T: # pylint: disable=arguments-renamed
@@ -454,6 +471,7 @@ class JChain(ICommon):
         if value is None:
             return default or type_()
         obj, last = value
+        assert isinstance(last, (int, str))
         return obj.ensure(last, type_, default)
 
     def ensureCast(self, chain: str, type_: Type[T], default: Optional[T] = None) -> T: # pylint: disable=arguments-renamed
@@ -469,4 +487,5 @@ class JChain(ICommon):
         if value is None:
             return default or type_()
         obj, last = value
+        assert isinstance(last, (int, str))
         return obj.ensureCast(last, type_, default)

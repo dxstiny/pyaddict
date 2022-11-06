@@ -45,9 +45,9 @@ class IExtended(ICommon):
     def get(self, index: Union[str, int]) -> Optional[Any]: ...
     @overload
     @abstractmethod
-    def get(self, index: Union[str, int], default: T = None) -> Union[Any, T]: ...
+    def get(self, index: Union[str, int], default: Optional[T] = None) -> Union[Any, T]: ...
     @abstractmethod
-    def get(self, key: Union[str, int], default: T = None) -> Union[T, Any]:
+    def get(self, key: Union[str, int], default: Optional[T] = None) -> Union[T, Any]:
         """get exception safe value"""
 
     @abstractmethod
