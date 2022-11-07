@@ -4,6 +4,7 @@ from __future__ import annotations
 __copyright__ = ("Copyright (c) 2022 https://github.com/dxstiny")
 
 import json
+import re
 from typing import Any, List, Optional, Tuple, Type, TypeVar, Union, overload
 
 from pyaddict.types import JArray, JObject
@@ -369,6 +370,7 @@ class JChain(ICommon):
         return bool(self._jlist)
 
     def _createChainLinks(self, chain: str) -> List[_ChainLink]: # pylint: disable=no-self-use
+        chain = re.sub(r"(\w)\[", r"\1.[", chain)
         return [ _ChainLink(key) for key in chain.split(".") ]
 
     def __getitem__(self, name: str) -> Any:
