@@ -428,6 +428,19 @@ class JChain(ICommon):
         assert isinstance(last, (int, str))
         return parent[last]
 
+    def assertGet(self, chain: str, type_: Type[T]) -> T:
+        """
+        resolves the chain & returns the value
+
+        raises an exception if the chain is invalid or the value is not the specified type
+        """
+        value = self._prepare(chain)
+        if value is None:
+            raise KeyError(f"invalid chain: {chain}")
+        parent, last = value
+        assert isinstance(last, (int, str))
+        return parent.assertGet(last, type_)
+
     def optionalGet(self, chain: str, type_: Type[T]) -> Optional[T]: # pylint: disable=arguments-renamed
         """
         tries to resolve the chain

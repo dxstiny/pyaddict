@@ -6,6 +6,7 @@ import unittest
 
 from pyaddict import JDict
 from pyaddict.pyaddict import JList, JListIterator
+from pyaddict.schema import  Object, String, Integer, Float, Boolean, Array
 from pyaddict.types import JObject
 
 
@@ -160,6 +161,36 @@ class TestUseCases(unittest.TestCase):
 
         self.assertIsInstance(JList.fromString(jdict.toString()), JList)
         self.assertIsInstance(JList.fromString(jdict.toString()).toString(), str)
+
+    def test_schemas(self) -> None:
+        schema = Object({
+            "stringvalue": String(),
+            "intvalue": Integer(),
+            "floatvalue": Float(),
+            "boolvalue": Boolean(),
+            "listvalue": Array(Integer()),
+            "dictvalue": Object({
+                "stringvalue": String(),
+                "intvalue": Integer(),
+                "floatvalue": Float(),
+                "boolvalue": Boolean(),
+                "listvalue": Array(Integer()),
+                "dictlist": Array(Object({
+                    "stringvalue": String(),
+                    "intvalue": Integer(),
+                    "floatvalue": Float(),
+                    "boolvalue": Boolean(),
+                }))
+            })
+        })
+        self.assertEqual(schema.valid(jdict), True)
+        self.assertEqual(schema.error(jdict), None)
+
+    def test_schema_noadditional(self) -> None:
+        schema = Object({
+            "stringvalue": String()
+        }).noAdditionalProperties()
+        self.assertEqual(schema.valid(jdict), False)
 
 if __name__ == '__main__':
     unittest.main()
