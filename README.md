@@ -5,7 +5,7 @@
 [![PyPI license](https://img.shields.io/pypi/l/pyaddict.svg)](https://pypi.python.org/pypi/pyaddict/)
 
 ## Description
-Yet another python library to safely work with json data. It implements many useful features such as optional chaining, type casting, safe indexing and default values.
+Yet another python library to safely work with json data. It implements many useful features such as optional chaining, schema validation, type casting, safe indexing and default values.
 
 ## Installation
 ```bash
@@ -15,6 +15,7 @@ pip install pyaddict
 ## Usage
 ```python
 from pyaddict import JDict, JList
+from pyaddict.schema import Object, String, Integer, Array
 
 jdict = JDict({
     "name": "John",
@@ -52,12 +53,28 @@ print(chain.ensureCast("cars.[2].mpg", str))  # ""
 # or via direct access (returns Optional[Any]!)
 print(chain["cars.[2].mpg"])  # IndexError
 print(chain["cars.[2]?.mpg"])  # None
+
+# schema validation
+schema = Object({
+    "name": String(),
+    "age": String().coerce(),
+    "dogs": Array(String()).min(1).optional()
+}).withAdditionalProperties()
+print(schema.error(dict)) # None
+
+badSchema = Object({
+    "name": String().min(5),
+    "age": Float(),
+    "cars": Object()
+})
+print(badSchema.error(dict)) # ValidationError(expected 4 to be greater than or equal to 5, name: min)
 ```
 
 The library is fully typed and thus can be used with mypy & pylint. Check out the [wiki](https://github.com/dxstiny/pyaddict/wiki) for more information.
 
 ## When to use
 When working with json data, it is common to have to deal with missing keys, wrong types, etc. This library provides a simple way to deal with these issues. Additionally, it provides easy-to-use typing support for mypy and pylint and detailed documentation.
+Starting with version 1.0.0, pyaddict includes a schema validation feature inspired by [zod](https://github.com/colinhacks/zod). It is especially useful when validating user input, e.g. in web applications.
 
 ## License
 [MIT](LICENSE)

@@ -162,6 +162,8 @@ class TestUseCases(unittest.TestCase):
         self.assertIsInstance(JList.fromString(jdict.toString()), JList)
         self.assertIsInstance(JList.fromString(jdict.toString()).toString(), str)
 
+
+class TestSchemas(unittest.TestCase):
     def test_schemas(self) -> None:
         schema = Object({
             "stringvalue": String(),
@@ -169,6 +171,7 @@ class TestUseCases(unittest.TestCase):
             "floatvalue": Float(),
             "boolvalue": Boolean(),
             "listvalue": Array(Integer()),
+            "intAsString": Integer().coerce(),
             "dictvalue": Object({
                 "stringvalue": String(),
                 "intvalue": Integer(),
@@ -183,14 +186,29 @@ class TestUseCases(unittest.TestCase):
                 }))
             })
         })
+        self.assertIsInstance(schema(jdict)["intAsString"], int)
         self.assertEqual(schema.valid(jdict), True)
         self.assertEqual(schema.error(jdict), None)
 
     def test_schema_noadditional(self) -> None:
         schema = Object({
             "stringvalue": String()
-        }).noAdditionalProperties()
+        })
         self.assertEqual(schema.valid(jdict), False)
+
+    def test_schema_int(self) -> None:
+        schema = Integer().min(0, False).max(10, False)
+        self.assertEqual(schema.valid(1.0), False)
+
+        self.assertEqual(schema.valid(0), False)
+        self.assertEqual(schema.valid(1), True)
+        self.assertEqual(schema.valid(9), True)
+        self.assertEqual(schema.valid(10), False)
+
+        schema2 = Integer().min(0, True).max(10, False)
+        self.assertEqual(schema2.valid(0), True)
+        self.assertEqual(schema2.valid(1), True)
+        self.assertEqual(schema2.valid(10), False)
 
 if __name__ == '__main__':
     unittest.main()

@@ -12,6 +12,7 @@ from pyaddict.types import JObject
 
 T = TypeVar("T")
 U = TypeVar("U")
+IS = TypeVar("IS")
 
 
 class ValidationState(Enum):
@@ -48,7 +49,6 @@ class ValidationError(ValueError):
     @property
     def path(self) -> List[str]:
         """the path to the error"""
-        print(self._path)
         return self._path
 
     @property
@@ -144,7 +144,7 @@ class ValidationResult(Generic[T]):
         return ValidationResult(ValidationState.Invalid, error=error)
 
 
-class ISchemaType(ABC):
+class ISchemaType(ABC, Generic[IS]):
     """Schema Type"""
     def __init__(self) -> None:
         super().__init__()
@@ -153,15 +153,15 @@ class ISchemaType(ABC):
         self._optional: bool = False
         self._coerce: bool = False
 
-    def coerce(self) -> ISchemaType:
+    def coerce(self) -> IS:
         """coerce the value (float -> int, str -> bool, etc.)"""
         self._coerce = True
-        return self
+        return self # type: ignore
 
-    def optional(self) -> ISchemaType:
+    def optional(self) -> IS:
         """make the value optional"""
         self._optional = True
-        return self
+        return self # type: ignore
 
     @abstractmethod
     def validate(self, value: T) -> ValidationResult[T]:
@@ -205,7 +205,7 @@ class ISchemaType(ABC):
         return self.validate(value).valid()
 
 
-class IWithEnum(ABC, Generic[T]):
+class IWithEnum(ABC, Generic[T, IS]):
     """Schema Type with Enum"""
     def __init__(self) -> None:
         super().__init__()
@@ -220,13 +220,13 @@ class IWithEnum(ABC, Generic[T]):
                                 "enum"))
         return ValidationResult.ok(value)
 
-    def enum(self, *values: U) -> IWithEnum[T]:
+    def enum(self, *values: U) -> IS:
         """set the enum values"""
         self._enum = list(*values)
-        return self
+        return self # type: ignore
 
 
-class IWithLength(ABC, Generic[T]):
+class IWithLength(ABC, Generic[T, IS]):
     """Schema Type with Length (array, string, etc.)"""
     def __init__(self) -> None:
         super().__init__()
@@ -242,32 +242,48 @@ class IWithLength(ABC, Generic[T]):
     def validate(self, value: T) -> ValidationResult[T]:
         """validate the value"""
         length = self.length(value)
-        if self._min is not None and length < self._min:
-            return ValidationResult.err(
-                ValidationError(f"expected {self.length(value)} to be greater than {self._min}",
-                                [],
-                                "min"))
-        if self._max is not None and length > self._max:
-            return ValidationResult.err(
-                ValidationError(f"expected {self.length(value)} to be less than {self._max}",
-                                [],
-                                "max"))
+        if self._min is not None:
+            if self._minInclusive:
+                if length < self._min:
+                    return ValidationResult.err(
+                        ValidationError(f"expected {self.length(value)} to be greater than or equal to {self._min}", # pylint: disable=line-too-long
+                                        [],
+                                        "min"))
+            else:
+                if length <= self._min:
+                    return ValidationResult.err(
+                        ValidationError(f"expected {self.length(value)} to be greater than {self._min}", # pylint: disable=line-too-long
+                                        [],
+                                        "min"))
+        if self._max is not None:
+            if self._maxInclusive:
+                if length > self._max:
+                    return ValidationResult.err(
+                        ValidationError(f"expected {self.length(value)} to be less than or equal to {self._max}", # pylint: disable=line-too-long
+                                        [],
+                                        "max"))
+            else:
+                if length >= self._max:
+                    return ValidationResult.err(
+                        ValidationError(f"expected {self.length(value)} to be less than {self._max}", # pylint: disable=line-too-long
+                                        [],
+                                        "max"))
         return ValidationResult.ok(value)
 
-    def min(self, min_: int, inclusive: bool = False) -> IWithLength[T]:
+    def min(self, min_: int, inclusive: bool = True) -> IS:
         """set the min length"""
         self._min = min_
         self._minInclusive = inclusive
-        return self
+        return self # type: ignore
 
-    def max(self, max_: int, inclusive: bool = False) -> IWithLength[T]:
+    def max(self, max_: int, inclusive: bool = True) -> IS:
         """set the max length"""
         self._max = max_
         self._maxInclusive = inclusive
-        return self
+        return self # type: ignore
 
 
-class String(ISchemaType, IWithLength[str], IWithEnum[str]):
+class String(ISchemaType["String"], IWithLength[str, "String"], IWithEnum[str, "String"]):
     """String Schema Type"""
     def __init__(self) -> None:
         super().__init__()
@@ -278,6 +294,7 @@ class String(ISchemaType, IWithLength[str], IWithEnum[str]):
 
     def validate(self, value: Any) -> ValidationResult[str]:
         result = self._coerceValue(value, str)
+
         if not result:
             return result
 
@@ -306,7 +323,7 @@ class String(ISchemaType, IWithLength[str], IWithEnum[str]):
         return self.regex(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
 
 
-class Integer(ISchemaType, IWithEnum[int], IWithLength[int]):
+class Integer(ISchemaType["Integer"], IWithEnum[int, "Integer"], IWithLength[int, "Integer"]):
     """Integer Schema Type"""
     def validate(self, value: Any) -> ValidationResult[int]:
         result = self._coerceValue(value, int)
@@ -324,7 +341,7 @@ class Integer(ISchemaType, IWithEnum[int], IWithLength[int]):
         return value
 
 
-class Float(ISchemaType, IWithEnum[float], IWithLength[float]):
+class Float(ISchemaType["Float"], IWithEnum[float, "Float"], IWithLength[float, "Float"]):
     """Float Schema Type"""
     def validate(self, value: Any) -> ValidationResult[float]:
         result = self._coerceValue(value, float)
@@ -342,7 +359,7 @@ class Float(ISchemaType, IWithEnum[float], IWithLength[float]):
         return value
 
 
-class Boolean(ISchemaType, IWithEnum[bool]):
+class Boolean(ISchemaType["Boolean"], IWithEnum[bool, "Boolean"]):
     """Boolean Schema Type"""
     def validate(self, value: Any) -> ValidationResult[bool]:
         result = self._coerceValue(value, bool)
@@ -352,18 +369,18 @@ class Boolean(ISchemaType, IWithEnum[bool]):
         return result
 
 
-class Object(ISchemaType):
+class Object(ISchemaType["Object"]):
     """Object Schema Type"""
     def __init__(self,
                  body: Optional[Dict[str, ISchemaType]] = None,
-                 additionalProperties: bool = True) -> None:
+                 additionalProperties: bool = False) -> None:
         super().__init__()
         self._body = body
         self._allowAdditionalProperties = additionalProperties
 
-    def noAdditionalProperties(self) -> Object:
+    def withAdditionalProperties(self, withAdditionalProperties: bool = True) -> Object:
         """disallow additional properties"""
-        self._allowAdditionalProperties = False
+        self._allowAdditionalProperties = withAdditionalProperties
         return self
 
     def validate(self, value: Any) -> ValidationResult[JObject]:
@@ -383,9 +400,10 @@ class Object(ISchemaType):
                     return result
                 continue
             keyRes = schema.validate(value[key])
-            if not keyRes.valid():
+            if not keyRes:
                 result.invalidate(ValidationError.inherit(keyRes.error, [key]))
                 return result
+            value[key] = keyRes.unwrap()
 
         if not self._allowAdditionalProperties:
             for key in result.unwrap():
@@ -397,7 +415,7 @@ class Object(ISchemaType):
 
         return result
 
-class Array(ISchemaType, IWithLength[List[Any]]):
+class Array(ISchemaType["Array"], IWithLength[List[Any], "Array"]):
     """Array Schema Type"""
     def __init__(self, item: ISchemaType) -> None:
         super().__init__()
