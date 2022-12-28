@@ -322,6 +322,10 @@ class String(ISchemaType["String"], IWithLength[str, "String"], IWithEnum[str, "
         """validate the value as an email"""
         return self.regex(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
 
+    def url(self) -> String:
+        """validate the value as a url"""
+        return self.regex(r"^(https?|ftp)://[^\s/$.?#].[^\s]*$")
+
 
 class Integer(ISchemaType["Integer"], IWithEnum[int, "Integer"], IWithLength[int, "Integer"]):
     """Integer Schema Type"""
@@ -372,7 +376,7 @@ class Boolean(ISchemaType["Boolean"], IWithEnum[bool, "Boolean"]):
 class Object(ISchemaType["Object"]):
     """Object Schema Type"""
     def __init__(self,
-                 body: Optional[Dict[str, ISchemaType]] = None,
+                 body: Optional[Dict[str, ISchemaType[Any]]] = None,
                  additionalProperties: bool = False) -> None:
         super().__init__()
         self._body = body
@@ -417,7 +421,7 @@ class Object(ISchemaType["Object"]):
 
 class Array(ISchemaType["Array"], IWithLength[List[Any], "Array"]):
     """Array Schema Type"""
-    def __init__(self, item: ISchemaType) -> None:
+    def __init__(self, item: ISchemaType[Any]) -> None:
         super().__init__()
         self._item = item
 
