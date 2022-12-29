@@ -165,7 +165,13 @@ class ISchemaType(ABC, Generic[IS]):
 
     @abstractmethod
     def validate(self, value: T) -> ValidationResult[T]:
-        """validate the value"""
+        """
+        validates the value
+
+        returns a ValidationResult,
+        which contains an error if the value is invalid
+        or the value if valid
+        """
         return ValidationResult.ok(value)
 
     def _coerceValue(self, value: Any, to: Type[T]) -> ValidationResult[T]:
@@ -194,14 +200,31 @@ class ISchemaType(ABC, Generic[IS]):
         return ValidationResult.ok( value )
 
     def __call__(self, value: T) -> T:
-        return self.validate(value).expect()
+        """
+        expect the value to be valid,
+        otherwise raise an error
+        """
+        return self.expect(value)
+
+    def expect(self, value: T, msg: Optional[str] = None) -> T:
+        """
+        expect the value to be valid,
+        otherwise raise an error with the message, if provided,
+        otherwise raise the original error
+        """
+        return self.validate(value).expect(msg)
 
     def error(self, value: T) -> Optional[ValidationError]:
-        """get the error if invalid"""
+        """
+        get the error if the value is invalid,
+        otherwise return None
+        """
         return self.validate(value).error
 
     def valid(self, value: T) -> bool:
-        """is the value valid?"""
+        """
+        is the value valid?
+        """
         return self.validate(value).valid()
 
 
@@ -288,6 +311,8 @@ class String(ISchemaType["String"], IWithLength[str, "String"], IWithEnum[str, "
     def __init__(self) -> None:
         super().__init__()
         self._regex: Optional[Union[Pattern[str], str]] = None
+        self._regexType: Optional[str] = None
+        self._regexMessage: Optional[str] = None
 
     def length(self, value: str) -> int:
         return len(value)
@@ -310,21 +335,31 @@ class String(ISchemaType["String"], IWithLength[str, "String"], IWithEnum[str, "
             if isinstance(self._regex, str):
                 self._regex = re.compile(self._regex)
             if not self._regex.match(result.unwrap()):
-                result.invalidate(ValidationError.inherit(result.error, ["regex"]))
+                assert self._regexType is not None and self._regexMessage is not None
+                result.invalidate(
+                    ValidationError(self._regexMessage, [], self._regexType))
         return result
 
     def regex(self, regex: Union[str, Pattern[str]]) -> String:
         """validate the value against a regex"""
         self._regex = regex
+        self._regexType = "regex"
+        self._regexMessage = f"string didn't match {self._regex}"
         return self
 
     def email(self) -> String:
         """validate the value as an email"""
-        return self.regex(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+        self._regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+        self._regexType = "email"
+        self._regexMessage = "string is not a valid email"
+        return self
 
     def url(self) -> String:
         """validate the value as a url"""
-        return self.regex(r"^(https?|ftp)://[^\s/$.?#].[^\s]*$")
+        self._regex = r"^(https?|ftp)://[^\s/$.?#].[^\s]*$"
+        self._regexType = "url"
+        self._regexMessage = "string is not a valid url"
+        return self
 
 
 class Integer(ISchemaType["Integer"], IWithEnum[int, "Integer"], IWithLength[int, "Integer"]):

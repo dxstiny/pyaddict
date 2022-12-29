@@ -210,5 +210,20 @@ class TestSchemas(unittest.TestCase):
         self.assertEqual(schema2.valid(1), True)
         self.assertEqual(schema2.valid(10), False)
 
+    def test_schema_string(self) -> None:
+        schema = String().url()
+        self.assertEqual(schema.valid("http://www.google.com"), True)
+        self.assertEqual(schema.valid("http://www.google.com/"), True)
+        self.assertEqual(schema.valid("http://www.google.com/abc"), True)
+        self.assertEqual(schema.valid("test"), False)
+
+        schema2 = String().email()
+        self.assertEqual(schema2.valid("test@mail.com"), True)
+        self.assertEqual(schema2.valid("test@mail"), False)
+
+        schema3 = String().regex(r"^[a-z]+$")
+        self.assertEqual(schema3.valid("test"), True)
+        self.assertEqual(schema3.valid("test123"), False)
+
 if __name__ == '__main__':
     unittest.main()
