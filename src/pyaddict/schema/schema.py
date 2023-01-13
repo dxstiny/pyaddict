@@ -245,7 +245,7 @@ class IWithEnum(ABC, Generic[T, IS]):
 
     def enum(self, *values: U) -> IS:
         """set the enum values"""
-        self._enum = list(*values)
+        self._enum = list(values)
         return self # type: ignore
 
 
