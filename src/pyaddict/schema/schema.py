@@ -480,3 +480,21 @@ class Array(ISchemaType["Array"], IWithLength[List[Any], "Array"]):
 
     def length(self, value: List[Any]) -> int:
         return len(value)
+
+
+class OneOf(ISchemaType["OneOf"]):
+    """OneOf Schema Type"""
+    def __init__(self, *items: ISchemaType[Any]) -> None:
+        super().__init__()
+        self._items = items
+
+    def validate(self, value: Any) -> ValidationResult[Any]:
+        errors: List[ValidationError] = [ ]
+        for item in self._items:
+            res = item.validate(value)
+            if res.valid(): # use typeguard
+                return res
+            assert res.error
+            errors.append(res.error)
+        return ValidationResult.err(
+            ValidationError("value didn't match any of the schemas", [], "oneOf"))

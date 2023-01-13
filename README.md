@@ -48,11 +48,11 @@ for car in cars.iterator().ensureCast(JDict):
 
 # chaining
 chain = jdict.chain()
-print(chain.ensureCast("cars.[1].mpg", str))  # "24.1"
-print(chain.ensureCast("cars.[2].mpg", str))  # ""
+print(chain.ensureCast("cars[1].mpg", str))  # "24.1"
+print(chain.ensureCast("cars[2].mpg", str))  # ""
 # or via direct access (returns Optional[Any]!)
-print(chain["cars.[2].mpg"])  # IndexError
-print(chain["cars.[2]?.mpg"])  # None
+print(chain["cars[2].mpg"])  # IndexError
+print(chain["cars[2]?.mpg"])  # None
 
 # schema validation
 schema = Object({
