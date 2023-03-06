@@ -73,10 +73,12 @@ class ValidationResult(Generic[T]):
     def __init__(self,
                  state: ValidationState,
                  data: Optional[T] = None,
-                 error: Optional[ValidationError] = None) -> None:
+                 error: Optional[ValidationError] = None,
+                 nullable: bool = False) -> None:
         self._state = state
         self._data = data
         self._error = error
+        self._nullable = nullable
 
     def valid(self) -> bool:
         """is the value valid?"""
@@ -90,18 +92,21 @@ class ValidationResult(Generic[T]):
             return f"ValidationResult({self._data})"
         return f"ValidationResult({self._error})"
 
+    def _assertReturnData(self) -> T:
+        if not self._nullable:
+            assert self._data is not None
+        return self._data # type: ignore # TODO(dxstiny) somehow return Optional[T]
+
     def unwrap(self) -> T:
         """unwrap the value if valid, otherwise raise an error"""
         if self._state == ValidationState.Valid:
-            assert self._data is not None
-            return self._data
+            return self._assertReturnData()
         raise ValueError("unwrap called on invalid value")
 
     def unwrapOr(self, default: T) -> T:
         """unwrap the value if valid, otherwise return the default"""
         if self._state == ValidationState.Valid:
-            assert self._data is not None
-            return self._data
+            return self._assertReturnData()
         return default
 
     def expect(self, msg: Optional[str] = None) -> T:
@@ -111,8 +116,7 @@ class ValidationResult(Generic[T]):
         otherwise raise the original error
         """
         if self._state == ValidationState.Valid:
-            assert self._data is not None
-            return self._data
+            return self._assertReturnData()
         if msg is None:
             assert self._error is not None
             raise self._error # pylint: disable=raising-bad-type # (mypy bug)
@@ -134,9 +138,9 @@ class ValidationResult(Generic[T]):
             self.invalidate(value.error)
 
     @staticmethod
-    def ok(data: U) -> ValidationResult[U]:
+    def ok(data: U, nullable: bool = False) -> ValidationResult[U]:
         """create a valid result"""
-        return ValidationResult(ValidationState.Valid, data=data)
+        return ValidationResult(ValidationState.Valid, data=data, nullable=nullable)
 
     @staticmethod
     def err(error: Optional[ValidationError] = None) -> ValidationResult[U]:
@@ -151,6 +155,7 @@ class ISchemaType(ABC, Generic[IS]):
         self._min: Optional[int] = None
         self._max: Optional[int] = None
         self._optional: bool = False
+        self._nullable: bool = False
         self._coerce: bool = False
 
     def coerce(self) -> IS:
@@ -161,6 +166,12 @@ class ISchemaType(ABC, Generic[IS]):
     def optional(self) -> IS:
         """make the value optional"""
         self._optional = True
+        self._nullable = True
+        return self # type: ignore
+
+    def nullable(self) -> IS:
+        """make the value nullable"""
+        self._nullable = True
         return self # type: ignore
 
     @abstractmethod
@@ -176,28 +187,32 @@ class ISchemaType(ABC, Generic[IS]):
 
     def _coerceValue(self, value: Any, to: Type[T]) -> ValidationResult[T]:
         """coerce the value"""
-        if self._coerce:
-            # str -> bool
-            if to == bool and isinstance(value, str):
-                if value.lower() in ("true", "1", "yes", "y"):
-                    return ValidationResult.ok( True ) # type: ignore
-                if value.lower() in ("false", "0", "no", "n"):
-                    return ValidationResult.ok( False ) # type: ignore
-                return ValidationResult.err(
-                    ValidationError(f"{value} is not a boolean",
-                                    [],
-                                    "coerce"))
+        if self._nullable and value is None:
+            return ValidationResult.ok( value, True ) # type: ignore
 
-            # str -> dict
-            if to in (dict, list) and isinstance(value, str): # type: ignore # (comparison-overlap)
-                return ValidationResult.ok( json.loads(value) )
-
-            # * -> * (hope & pray)
-            return ValidationResult.ok( to(value) ) # type: ignore
-        if not isinstance(value, to):
+        if not self._coerce:
+            if isinstance(value, to):
+                return ValidationResult.ok( value )
             return ValidationResult.err( ValidationError(f"{value} is not of type {to}",
                                                          [], "coerce") )
-        return ValidationResult.ok( value )
+
+        # str -> bool
+        if to == bool and isinstance(value, str):
+            if value.lower() in ("true", "1", "yes", "y"):
+                return ValidationResult.ok( True ) # type: ignore
+            if value.lower() in ("false", "0", "no", "n"):
+                return ValidationResult.ok( False ) # type: ignore
+            return ValidationResult.err(
+                ValidationError(f"{value} is not a boolean",
+                                [],
+                                "coerce"))
+
+        # str -> dict
+        if to in (dict, list) and isinstance(value, str): # type: ignore # (comparison-overlap)
+            return ValidationResult.ok( json.loads(value) )
+
+        # * -> * (hope & pray)
+        return ValidationResult.ok( to(value) ) # type: ignore
 
     def __call__(self, value: T) -> T:
         """
@@ -245,7 +260,7 @@ class IWithEnum(ABC, Generic[T, IS]):
 
     def enum(self, *values: U) -> IS:
         """set the enum values"""
-        self._enum = list(values)
+        self._enum = list(*values)
         return self # type: ignore
 
 
@@ -264,8 +279,9 @@ class IWithLength(ABC, Generic[T, IS]):
 
     def validate(self, value: T) -> ValidationResult[T]:
         """validate the value"""
-        length = self.length(value)
         if self._min is not None:
+            length = self.length(value)
+
             if self._minInclusive:
                 if length < self._min:
                     return ValidationResult.err(
@@ -279,6 +295,8 @@ class IWithLength(ABC, Generic[T, IS]):
                                         [],
                                         "min"))
         if self._max is not None:
+            length = self.length(value)
+
             if self._maxInclusive:
                 if length > self._max:
                     return ValidationResult.err(

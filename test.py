@@ -225,5 +225,29 @@ class TestSchemas(unittest.TestCase):
         self.assertEqual(schema3.valid("test"), True)
         self.assertEqual(schema3.valid("test123"), False)
 
+    def test_schema_nullable(self) -> None:
+        schema = Object({
+            "stringvalue": String().nullable(),
+            "intvalue": Integer().optional(),
+        })
+        self.assertTrue(schema.valid({
+            "stringvalue": None,
+        }))
+        self.assertTrue(schema.valid({
+            "stringvalue": None,
+            "intvalue": None,
+        }))
+        self.assertTrue(schema.valid({
+            "stringvalue": "test",
+            "intvalue": 5,
+        }))
+        self.assertFalse(schema.valid({
+            "stringvalue": "test",
+            "intvalue": "test",
+        }))
+        self.assertFalse(schema.valid({
+            "stringvalue": 21323,
+        }))
+
 if __name__ == '__main__':
     unittest.main()
