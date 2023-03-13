@@ -16,9 +16,9 @@ python3 -m mypy src/pyaddict
 exit
 
 :build
-py -m build
+python3 -m build
 exit
 
 :push
-py -m twine upload dist/*
+python3 -m twine upload dist/*
 exit

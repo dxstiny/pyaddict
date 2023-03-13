@@ -17,6 +17,9 @@ __all__ = ["JDict", "JList", "JListIterator"]
 
 class JDict(JObject, IExtended):
     """dict extractor"""
+
+    __slots__ = ("_data", )
+
     def __init__(self, data: Optional[JObject] = None) -> None:
         self._data = data or { }
         super().__init__(self._data)
@@ -120,6 +123,12 @@ class JDict(JObject, IExtended):
             return JDict(value)
         return JDict()
 
+    @staticmethod
+    def fromFile(path: str, encoding: str = "utf-8") -> JDict:
+        """returns a JDict from a file"""
+        with open(path, "r", encoding=encoding) as file:
+            return JDict.fromString(file.read())
+
     def chain(self) -> JChain:
         """
         equivalent to js optional chaining
@@ -129,6 +138,9 @@ class JDict(JObject, IExtended):
 
 class JList(JArray, IExtended):
     """list extractor"""
+
+    __slots__ = ("_data", )
+
     def __init__(self, data: Optional[JArray] = None) -> None:
         self._data = data or [ ]
         super().__init__(self._data)
@@ -251,6 +263,12 @@ class JList(JArray, IExtended):
             return JList(value)
         return JList()
 
+    @staticmethod
+    def fromFile(file: str, encoding: str = "utf-8") -> JList:
+        """returns a JList from a file"""
+        with open(file, "r", encoding=encoding) as stream:
+            return JList.fromString(stream.read())
+
     def chain(self) -> JChain:
         """
         equivalent to js optional chaining
@@ -260,6 +278,9 @@ class JList(JArray, IExtended):
 
 class JListIterator(JArray, ICommon):
     """list iterator"""
+
+    __slots__ = ("_data", )
+
     def __init__(self, data: JList) -> None:
         self._data = data
         super().__init__(self._data)
@@ -308,6 +329,9 @@ class JListIterator(JArray, ICommon):
 
 class _ChainLink:
     """chain link"""
+
+    __slots__ = ("_key", "_optional", "_index")
+
     def __init__(self, key: str) -> None:
         self._key: Union[str, int] = key
         self._optional = False
@@ -353,6 +377,9 @@ class _ChainLink:
 
 class JChain(ICommon):
     """optional chaining"""
+
+    __slots__ = ("_jdict", "_jlist")
+
     def __init__(self,
                  jdict: Optional[JDict] = None,
                  jlist: Optional[JList] = None) -> None:
@@ -369,7 +396,7 @@ class JChain(ICommon):
     def _isList(self) -> bool:
         return bool(self._jlist)
 
-    def _createChainLinks(self, chain: str) -> List[_ChainLink]: # pylint: disable=no-self-use
+    def _createChainLinks(self, chain: str) -> List[_ChainLink]:
         chain = re.sub(r"(\w)\[", r"\1.[", chain)
         return [ _ChainLink(key) for key in chain.split(".") ]
 

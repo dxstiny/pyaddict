@@ -227,8 +227,8 @@ class TestSchemas(unittest.TestCase):
 
     def test_schema_nullable(self) -> None:
         schema = Object({
-            "stringvalue": String().nullable(),
-            "intvalue": Integer().optional(),
+            "stringvalue": String().nullable().min(3).enum("test"),
+            "intvalue": Integer().optional().min(3),
         })
         self.assertTrue(schema.valid({
             "stringvalue": None,
@@ -249,5 +249,12 @@ class TestSchemas(unittest.TestCase):
             "stringvalue": 21323,
         }))
 
+    def test_schema_default(self) -> None:
+        schema = Integer().default(5)
+        self.assertTrue(schema.valid(None))
+        self.assertEqual(schema(None), 5)
+        self.assertTrue(schema.valid(6))
+        self.assertEqual(schema(6), 6)
+
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity = 2)
