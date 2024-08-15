@@ -4,6 +4,8 @@ __copyright__ = ("Copyright (c) 2022 https://github.com/dxstiny")
 
 import unittest
 
+from sqlalchemy import null
+
 from pyaddict import JDict
 from pyaddict.pyaddict import JList, JListIterator
 from pyaddict.schema import  Object, String, Integer, Float, Boolean, Array
@@ -249,12 +251,75 @@ class TestSchemas(unittest.TestCase):
             "stringvalue": 21323,
         }))
 
+    def test_schema_optional(self) -> None:
+        schema = Object({
+            "objectvalue": Object({
+                "key": String().enum("value")
+            }).optional(),
+            "intvalue": Integer().optional().min(3),
+        })
+        self.assertTrue(schema.valid({
+        }))
+        self.assertTrue(schema.valid({
+            "objectvalue": None,
+        }))
+        self.assertTrue(schema.valid({
+            "objectvalue": {
+                "key": "value"
+            },
+            "intvalue": None
+        }))
+        self.assertFalse(schema.valid({
+            "objectvalue": {
+                "key": None
+            },
+            "intvalue": 10
+        }))
+        self.assertFalse(schema.valid({
+            "intvalue": 1
+        }))
+
     def test_schema_default(self) -> None:
         schema = Integer().default(5)
         self.assertTrue(schema.valid(None))
         self.assertEqual(schema(None), 5)
         self.assertTrue(schema.valid(6))
         self.assertEqual(schema(6), 6)
+
+    def test_schema_object_equals(self) -> None:
+        schema = Object({
+            "a": 5,
+            "b": 2.1,
+            "c": String().optional(),
+            "d": "hello world",
+            "e": None,
+            "f": [],
+            "g": {}
+        })
+        self.assertTrue(
+            schema.valid({
+                "a": 5,
+                "b": 2.1,
+                "c": "hello world",
+                "d": "hello world",
+                "e": None,
+                "f": [],
+                "g": {}
+            })
+        )
+        self.assertFalse(
+            schema.valid({
+                "a": 5,
+                "b": 2.2,
+                "d": "hello world",
+                "e": None,
+                "f": [],
+                "g": {}
+            })
+        )
+        self.assertFalse(
+            schema.valid({})
+        )
 
 if __name__ == '__main__':
     unittest.main(verbosity = 2)

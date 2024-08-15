@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, TypeVar, Pattern, Union
 import re
 
 from pyaddict.types import JObject
-#JObject = Dict[str, Any]
+
 from pyaddict.schema.result import ValidationResult, ValidationError
 from pyaddict.schema.base import ISchemaType, IWithLength, IWithEnum
 
@@ -15,15 +15,25 @@ U = TypeVar("U")
 IS = TypeVar("IS", bound="ISchemaType[Any]")
 
 
-class String(ISchemaType["String"],
-             IWithLength[str, "String"],
-             IWithEnum[str, "String"]):
+class String(
+    ISchemaType["String"], IWithLength[str, "String"], IWithEnum[str, "String"]
+):
     """String Schema Type"""
 
-    __slots__ = ("_regex", "_regexType", "_regexMessage",
-                 "_min", "_max", "_minInclusive", "_maxInclusive",
-                 "_enum",
-                 "_nullable", "_coerce", "_default", "_optional")
+    __slots__ = (
+        "_regex",
+        "_regexType",
+        "_regexMessage",
+        "_min",
+        "_max",
+        "_minInclusive",
+        "_maxInclusive",
+        "_enum",
+        "_nullable",
+        "_coerce",
+        "_default",
+        "_optional",
+    )
 
     def __init__(self) -> None:
         super().__init__()
@@ -54,7 +64,8 @@ class String(ISchemaType["String"],
             if not self._regex.match(result.unwrap()):
                 assert self._regexType is not None and self._regexMessage is not None
                 result.invalidate(
-                    ValidationError(self._regexMessage, [], self._regexType))
+                    ValidationError(self._regexMessage, [], self._regexType)
+                )
         return result
 
     def regex(self, regex: Union[str, Pattern[str]]) -> String:
@@ -79,10 +90,22 @@ class String(ISchemaType["String"],
         return self
 
 
-class Integer(ISchemaType["Integer"], IWithEnum[int, "Integer"], IWithLength[int, "Integer"]):
+class Integer(
+    ISchemaType["Integer"], IWithEnum[int, "Integer"], IWithLength[int, "Integer"]
+):
     """Integer Schema Type"""
-    __slots__ = ("_min", "_max", "_minInclusive", "_maxInclusive", "_enum",
-                 "_nullable", "_coerce", "_default", "_optional")
+
+    __slots__ = (
+        "_min",
+        "_max",
+        "_minInclusive",
+        "_maxInclusive",
+        "_enum",
+        "_nullable",
+        "_coerce",
+        "_default",
+        "_optional",
+    )
 
     def validate(self, value: Any) -> ValidationResult[int]:
         result = self._coerceValue(value, int)
@@ -100,10 +123,22 @@ class Integer(ISchemaType["Integer"], IWithEnum[int, "Integer"], IWithLength[int
         return value
 
 
-class Float(ISchemaType["Float"], IWithEnum[float, "Float"], IWithLength[float, "Float"]):
+class Float(
+    ISchemaType["Float"], IWithEnum[float, "Float"], IWithLength[float, "Float"]
+):
     """Float Schema Type"""
-    __slots__ = ("_min", "_max", "_minInclusive", "_maxInclusive", "_enum",
-                 "_nullable", "_coerce", "_default", "_optional")
+
+    __slots__ = (
+        "_min",
+        "_max",
+        "_minInclusive",
+        "_maxInclusive",
+        "_enum",
+        "_nullable",
+        "_coerce",
+        "_default",
+        "_optional",
+    )
 
     def validate(self, value: Any) -> ValidationResult[float]:
         result = self._coerceValue(value, float)
@@ -123,6 +158,7 @@ class Float(ISchemaType["Float"], IWithEnum[float, "Float"], IWithLength[float, 
 
 class Boolean(ISchemaType["Boolean"], IWithEnum[bool, "Boolean"]):
     """Boolean Schema Type"""
+
     __slots__ = ("_enum", "_nullable", "_coerce", "_default", "_optional")
 
     def validate(self, value: Any) -> ValidationResult[bool]:
@@ -136,12 +172,20 @@ class Boolean(ISchemaType["Boolean"], IWithEnum[bool, "Boolean"]):
 class Object(ISchemaType["Object"]):
     """Object Schema Type"""
 
-    __slots__ = ("_body", "_allowAdditionalProperties",
-                 "_nullable", "_coerce", "_default", "_optional")
+    __slots__ = (
+        "_body",
+        "_allowAdditionalProperties",
+        "_nullable",
+        "_coerce",
+        "_default",
+        "_optional",
+    )
 
-    def __init__(self,
-                 body: Optional[Dict[str, ISchemaType[Any]]] = None,
-                 additionalProperties: bool = False) -> None:
+    def __init__(
+        self,
+        body: Optional[Dict[str, ISchemaType[Any] | Any]] = None,
+        additionalProperties: bool = False,
+    ) -> None:
         super().__init__()
         self._body = body
         self._allowAdditionalProperties = additionalProperties
@@ -153,6 +197,8 @@ class Object(ISchemaType["Object"]):
 
     def validate(self, value: Any) -> ValidationResult[JObject]:
         result = self._coerceValue(value, dict)
+        if value is None and self._nullable:
+            return result
         if not result:
             return result
 
@@ -160,13 +206,23 @@ class Object(ISchemaType["Object"]):
 
         for key, schema in body.items():
             if key not in result.unwrap():
-                if not schema._optional: # pylint: disable=protected-access
+                if not isinstance(schema, ISchemaType) or not schema._optional:  # pylint: disable=protected-access
                     result.invalidate(
-                        ValidationError(f"expected {key} to be present",
-                                        [],
-                                        "required"))
+                        ValidationError(f"expected {key} to be present", [], "required")
+                    )
                     return result
                 continue
+
+            if not isinstance(schema, ISchemaType):
+                if value[key] != schema:
+                    result.invalidate(
+                        ValidationError(
+                            f"expected {value[key]} to equal {schema}", [key], "equals"
+                        )
+                    )
+                    return result
+                continue
+
             keyRes = schema.validate(value[key])
             if not keyRes:
                 result.invalidate(ValidationError.inherit(keyRes.error, [key]))
@@ -176,18 +232,20 @@ class Object(ISchemaType["Object"]):
         if not self._allowAdditionalProperties:
             for key in result.unwrap():
                 if key not in body:
-                    result.invalidate(ValidationError(f"unexpected property {key}",
-                                                     [],
-                                                     "additionalProperties"))
+                    result.invalidate(
+                        ValidationError(
+                            f"unexpected property {key}", [], "additionalProperties"
+                        )
+                    )
                     return result
 
         return result
 
+
 class Array(ISchemaType["Array"], IWithLength[List[Any], "Array"]):
     """Array Schema Type"""
 
-    __slots__ = ("_item",
-                 "_min", "_max", "_minInclusive", "_maxInclusive")
+    __slots__ = ("_item", "_min", "_max", "_minInclusive", "_maxInclusive")
 
     def __init__(self, item: ISchemaType[Any]) -> None:
         super().__init__()
@@ -202,7 +260,7 @@ class Array(ISchemaType["Array"], IWithLength[List[Any], "Array"]):
         if not result:
             return result
 
-        values: List[Any] = [ ]
+        values: List[Any] = []
         for item in result.unwrap():
             res = self._item.validate(item)
             if not res.valid():
@@ -218,20 +276,20 @@ class Array(ISchemaType["Array"], IWithLength[List[Any], "Array"]):
 class OneOf(ISchemaType["OneOf"]):
     """OneOf Schema Type"""
 
-    __slots__ = ("_items",
-                 "_nullable", "_coerce", "_default", "_optional")
+    __slots__ = ("_items", "_nullable", "_coerce", "_default", "_optional")
 
     def __init__(self, *items: ISchemaType[Any]) -> None:
         super().__init__()
         self._items = items
 
     def validate(self, value: Any) -> ValidationResult[Any]:
-        errors: List[ValidationError] = [ ]
+        errors: List[ValidationError] = []
         for item in self._items:
             res = item.validate(value)
-            if res.valid(): # use typeguard
+            if res.valid():  # use typeguard
                 return res
             assert res.error
             errors.append(res.error)
         return ValidationResult.err(
-            ValidationError("value didn't match any of the schemas", [], "oneOf"))
+            ValidationError("value didn't match any of the schemas", [], "oneOf")
+        )

@@ -1,6 +1,7 @@
 """json schema validation inspired by zod"""
+
 from __future__ import annotations
-from typing import List, Optional, Generic,TypeVar, Any, Type
+from typing import List, Optional, Generic, TypeVar, Any, Type
 from abc import ABC, abstractmethod
 import json
 
@@ -14,6 +15,7 @@ IS = TypeVar("IS", bound="ISchemaType[Any]")
 
 class INullable(Generic[IS]):
     """Nullable"""
+
     def __init__(self) -> None:
         super().__init__()
         self._nullable: bool = False
@@ -21,11 +23,12 @@ class INullable(Generic[IS]):
     def nullable(self) -> IS:
         """make the value nullable"""
         self._nullable = True
-        return self # type: ignore
+        return self  # type: ignore
 
 
 class ISchemaType(ABC, Generic[IS], INullable[IS]):
     """Schema Type"""
+
     def __init__(self) -> None:
         super().__init__()
         self._optional: bool = False
@@ -35,19 +38,22 @@ class ISchemaType(ABC, Generic[IS], INullable[IS]):
     def coerce(self) -> IS:
         """coerce the value (float -> int, str -> bool, etc.)"""
         self._coerce = True
-        return self # type: ignore
+        return self  # type: ignore
 
-    def optional(self) -> IS:
-        """make the value optional"""
+    def optional(self, nullable: bool = True) -> IS:
+        """
+        make the value optional (e.g., a key does not need to exist)
+        if nullable is `False` and `None` is passed, the result will be invalid
+        """
         self._optional = True
-        self._nullable = True
-        return self # type: ignore
+        self._nullable = nullable
+        return self  # type: ignore
 
     def default(self, value: T) -> IS:
         """set the default value"""
         self._default = value
         self._nullable = True
-        return self # type: ignore
+        return self  # type: ignore
 
     @abstractmethod
     def validate(self, value: T) -> ValidationResult[T]:
@@ -63,31 +69,40 @@ class ISchemaType(ABC, Generic[IS], INullable[IS]):
     def _coerceValue(self, value: Any, to: Type[T]) -> ValidationResult[T]:
         """coerce the value"""
         if self._nullable and value is None:
-            return ValidationResult.ok( self._default, True ) # type: ignore
+            return ValidationResult.ok(self._default, True)  # type: ignore
 
         if not self._coerce:
             if isinstance(value, to):
-                return ValidationResult.ok( value )
-            return ValidationResult.err( ValidationError(f"{value} is not of type {to}",
-                                                         [], "coerce") )
+                return ValidationResult.ok(value)
+            return ValidationResult.err(
+                ValidationError(f"{value} is not of type {to}", [], "coerce")
+            )
 
         # str -> bool
         if to == bool and isinstance(value, str):
             if value.lower() in ("true", "1", "yes", "y"):
-                return ValidationResult.ok( True ) # type: ignore
+                return ValidationResult.ok(True)  # type: ignore
             if value.lower() in ("false", "0", "no", "n"):
-                return ValidationResult.ok( False ) # type: ignore
+                return ValidationResult.ok(False)  # type: ignore
             return ValidationResult.err(
-                ValidationError(f"{value} is not a boolean",
-                                [],
-                                "coerce"))
+                ValidationError(f"{value} is not a boolean", [], "coerce")
+            )
 
         # str -> dict
-        if to in (dict, list) and isinstance(value, str): # type: ignore # (comparison-overlap)
-            return ValidationResult.ok( json.loads(value) )
+        if to in (dict, list) and isinstance(value, str):  # type: ignore # (comparison-overlap)
+            return ValidationResult.ok(json.loads(value))
 
-        # * -> * (hope & pray)
-        return ValidationResult.ok( to(value) ) # type: ignore
+        try:
+            # * -> * (hope & pray)
+
+            if value is None:
+                return ValidationResult.ok(to())
+
+            return ValidationResult.ok(to(value))  # type: ignore
+        except:  # pylint: disable=bare-except
+            return ValidationResult.err(
+                ValidationError(f"{value} could not be coerced to {to}", [], "coerce")
+            )
 
     def __call__(self, value: T) -> T:
         """
@@ -131,23 +146,23 @@ class IWithEnum(ABC, Generic[T, IS], INullable[IS]):
             return ValidationResult.ok(value)
 
         if self._nullable and value is None:
-            return ValidationResult.ok( value, True ) # type: ignore
+            return ValidationResult.ok(value, True)  # type: ignore
 
         if value not in self._enum:
             return ValidationResult.err(
-                ValidationError(f"{value} is not in {self._enum}",
-                                [],
-                                "enum"))
+                ValidationError(f"{value} is not in {self._enum}", [], "enum")
+            )
         return ValidationResult.ok(value)
 
     def enum(self, *values: U) -> IS:
         """set the enum values"""
-        self._enum = list(values) # type: ignore
-        return self # type: ignore
+        self._enum = list(values)  # type: ignore
+        return self  # type: ignore
 
 
 class IWithLength(ABC, Generic[T, IS], INullable[IS]):
     """Schema Type with Length (array, string, etc.)"""
+
     def __init__(self) -> None:
         super().__init__()
         self._min: Optional[int] = None
@@ -162,7 +177,7 @@ class IWithLength(ABC, Generic[T, IS], INullable[IS]):
     def validate(self, value: T) -> ValidationResult[T]:
         """validate the value"""
         if self._nullable and value is None:
-            return ValidationResult.ok( value, True ) # type: ignore
+            return ValidationResult.ok(value, True)  # type: ignore
 
         if self._min is not None:
             length = self.length(value)
@@ -170,40 +185,52 @@ class IWithLength(ABC, Generic[T, IS], INullable[IS]):
             if self._minInclusive:
                 if length < self._min:
                     return ValidationResult.err(
-                        ValidationError(f"expected {self.length(value)} to be greater than or equal to {self._min}", # pylint: disable=line-too-long
-                                        [],
-                                        "min"))
+                        ValidationError(
+                            f"expected {self.length(value)} to be greater than or equal to {self._min}",  # pylint: disable=line-too-long
+                            [],
+                            "min",
+                        )
+                    )
             else:
                 if length <= self._min:
                     return ValidationResult.err(
-                        ValidationError(f"expected {self.length(value)} to be greater than {self._min}", # pylint: disable=line-too-long
-                                        [],
-                                        "min"))
+                        ValidationError(
+                            f"expected {self.length(value)} to be greater than {self._min}",  # pylint: disable=line-too-long
+                            [],
+                            "min",
+                        )
+                    )
         if self._max is not None:
             length = self.length(value)
 
             if self._maxInclusive:
                 if length > self._max:
                     return ValidationResult.err(
-                        ValidationError(f"expected {self.length(value)} to be less than or equal to {self._max}", # pylint: disable=line-too-long
-                                        [],
-                                        "max"))
+                        ValidationError(
+                            f"expected {self.length(value)} to be less than or equal to {self._max}",  # pylint: disable=line-too-long
+                            [],
+                            "max",
+                        )
+                    )
             else:
                 if length >= self._max:
                     return ValidationResult.err(
-                        ValidationError(f"expected {self.length(value)} to be less than {self._max}", # pylint: disable=line-too-long
-                                        [],
-                                        "max"))
+                        ValidationError(
+                            f"expected {self.length(value)} to be less than {self._max}",  # pylint: disable=line-too-long
+                            [],
+                            "max",
+                        )
+                    )
         return ValidationResult.ok(value)
 
     def min(self, min_: int, inclusive: bool = True) -> IS:
         """set the min length"""
         self._min = min_
         self._minInclusive = inclusive
-        return self # type: ignore
+        return self  # type: ignore
 
     def max(self, max_: int, inclusive: bool = True) -> IS:
         """set the max length"""
         self._max = max_
         self._maxInclusive = inclusive
-        return self # type: ignore
+        return self  # type: ignore

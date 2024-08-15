@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """pyaddict"""
+
 from __future__ import annotations
-__copyright__ = ("Copyright (c) 2022 https://github.com/dxstiny")
+
+__copyright__ = "Copyright (c) 2022 https://github.com/dxstiny"
 
 from typing import Union, Optional, Any, Type, TypeVar, overload
 from abc import ABC, abstractmethod
@@ -22,11 +24,15 @@ class ICommon(ABC):
         """you want to handle deviating data (extens dict.get() with a type)"""
 
     @abstractmethod
-    def ensure(self, key: Union[str, int], type_: Type[T], default: Optional[T] = None) -> T:
+    def ensure(
+        self, key: Union[str, int], type_: Type[T], default: Optional[T] = None
+    ) -> T:
         """you don't really know the data, but want to have a default value"""
 
     @abstractmethod
-    def ensureCast(self, key: Union[str, int], type_: Type[T], default: Optional[T] = None) -> T:
+    def ensureCast(
+        self, key: Union[str, int], type_: Type[T], default: Optional[T] = None
+    ) -> T:
         """
         you don't really know the data, don't care about the type
         but want to have a default value
@@ -45,7 +51,9 @@ class IExtended(ICommon):
     def get(self, index: Union[str, int]) -> Optional[Any]: ...
     @overload
     @abstractmethod
-    def get(self, index: Union[str, int], default: Optional[T] = None) -> Union[Any, T]: ...
+    def get(
+        self, index: Union[str, int], default: Optional[T] = None
+    ) -> Union[Any, T]: ...
     @abstractmethod
     def get(self, key: Union[str, int], default: Optional[T] = None) -> Union[T, Any]:
         """get exception safe value"""
