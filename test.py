@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 """pyaddict"""
-__copyright__ = ("Copyright (c) 2022 https://github.com/dxstiny")
+
+__copyright__ = "Copyright (c) 2022 https://github.com/dxstiny"
 
 import unittest
 
-from sqlalchemy import null
-
 from pyaddict import JDict
 from pyaddict.pyaddict import JList, JListIterator
-from pyaddict.schema import  Object, String, Integer, Float, Boolean, Array
+from pyaddict.schema import Object, String, Integer, Float, Boolean, Array
 from pyaddict.types import JObject
 
 
@@ -39,7 +38,7 @@ dictionary: JObject = {
                 "boolvalue": True,
             },
         ],
-    }
+    },
 }
 
 jdict = JDict(dictionary)
@@ -75,21 +74,21 @@ class TestAllDict(unittest.TestCase):
         self.assertEqual(jdict.ensureCast("listvalue", list), [1, 2, 3])
 
     def test_nested(self) -> None:
-        self.assertEqual(jdict.ensureCast("dictvalue", JDict)
-                                    .assertGet("stringvalue", str),
-                         "value2")
-        self.assertEqual(jdict.ensureCast("dictvalue", JDict)
-                                    .assertGet("intvalue", int),
-                         2)
-        self.assertEqual(jdict.ensureCast("dictvalue", JDict)
-                                    .assertGet("floatvalue", float),
-                         2.0)
-        self.assertEqual(jdict.ensureCast("dictvalue", JDict)
-                                    .assertGet("boolvalue", bool),
-                         True)
-        self.assertEqual(jdict.ensureCast("dictvalue", JDict)
-                                    .assertGet("listvalue", list),
-                         [2, 3, 4])
+        self.assertEqual(
+            jdict.ensureCast("dictvalue", JDict).assertGet("stringvalue", str), "value2"
+        )
+        self.assertEqual(
+            jdict.ensureCast("dictvalue", JDict).assertGet("intvalue", int), 2
+        )
+        self.assertEqual(
+            jdict.ensureCast("dictvalue", JDict).assertGet("floatvalue", float), 2.0
+        )
+        self.assertEqual(
+            jdict.ensureCast("dictvalue", JDict).assertGet("boolvalue", bool), True
+        )
+        self.assertEqual(
+            jdict.ensureCast("dictvalue", JDict).assertGet("listvalue", list), [2, 3, 4]
+        )
 
 
 class TestUseCases(unittest.TestCase):
@@ -146,20 +145,22 @@ class TestUseCases(unittest.TestCase):
 
     def test_chaining(self) -> None:
         chain = jdict.chain()
-        self.assertEqual(chain.ensureCast("dictvalue.listvalue", JList)
-                              .iterator()
-                              .ensure(int),
-                         [2, 3, 4])
+        self.assertEqual(
+            chain.ensureCast("dictvalue.listvalue", JList).iterator().ensure(int),
+            [2, 3, 4],
+        )
         self.assertEqual(chain.ensureCast("dictvalue.listvalue.[0]", int), 2)
         self.assertIsNone(chain.optionalGet("dictvalue.dictlist.[2]", dict))
-        self.assertRaises(IndexError, chain.__getitem__, "dictvalue.dictlist.[2].value") # []
+        self.assertRaises(
+            IndexError, chain.__getitem__, "dictvalue.dictlist.[2].value"
+        )  # []
         self.assertIsNone(chain.optionalGet("dictvalue.dictlist.[2]?.stringvalue", str))
 
     def test_serialise(self) -> None:
         self.assertIsInstance(jdict.toString(), str)
         self.assertIsInstance(JDict.fromString(jdict.toString()), JDict)
 
-        self.assertEqual(JList.fromString(jdict.toString()), [ ])
+        self.assertEqual(JList.fromString(jdict.toString()), [])
 
         self.assertIsInstance(JList.fromString(jdict.toString()), JList)
         self.assertIsInstance(JList.fromString(jdict.toString()).toString(), str)
@@ -167,35 +168,41 @@ class TestUseCases(unittest.TestCase):
 
 class TestSchemas(unittest.TestCase):
     def test_schemas(self) -> None:
-        schema = Object({
-            "stringvalue": String(),
-            "intvalue": Integer(),
-            "floatvalue": Float(),
-            "boolvalue": Boolean(),
-            "listvalue": Array(Integer()),
-            "intAsString": Integer().coerce(),
-            "dictvalue": Object({
+        schema = Object(
+            {
                 "stringvalue": String(),
                 "intvalue": Integer(),
                 "floatvalue": Float(),
                 "boolvalue": Boolean(),
                 "listvalue": Array(Integer()),
-                "dictlist": Array(Object({
-                    "stringvalue": String(),
-                    "intvalue": Integer(),
-                    "floatvalue": Float(),
-                    "boolvalue": Boolean(),
-                }))
-            })
-        })
+                "intAsString": Integer().coerce(),
+                "dictvalue": Object(
+                    {
+                        "stringvalue": String(),
+                        "intvalue": Integer(),
+                        "floatvalue": Float(),
+                        "boolvalue": Boolean(),
+                        "listvalue": Array(Integer()),
+                        "dictlist": Array(
+                            Object(
+                                {
+                                    "stringvalue": String(),
+                                    "intvalue": Integer(),
+                                    "floatvalue": Float(),
+                                    "boolvalue": Boolean(),
+                                }
+                            )
+                        ),
+                    }
+                ),
+            }
+        )
         self.assertIsInstance(schema(jdict)["intAsString"], int)
         self.assertEqual(schema.valid(jdict), True)
         self.assertEqual(schema.error(jdict), None)
 
     def test_schema_noadditional(self) -> None:
-        schema = Object({
-            "stringvalue": String()
-        })
+        schema = Object({"stringvalue": String()})
         self.assertEqual(schema.valid(jdict), False)
 
     def test_schema_int(self) -> None:
@@ -228,56 +235,71 @@ class TestSchemas(unittest.TestCase):
         self.assertEqual(schema3.valid("test123"), False)
 
     def test_schema_nullable(self) -> None:
-        schema = Object({
-            "stringvalue": String().nullable().min(3).enum("test"),
-            "intvalue": Integer().optional().min(3),
-        })
-        self.assertTrue(schema.valid({
-            "stringvalue": None,
-        }))
-        self.assertTrue(schema.valid({
-            "stringvalue": None,
-            "intvalue": None,
-        }))
-        self.assertTrue(schema.valid({
-            "stringvalue": "test",
-            "intvalue": 5,
-        }))
-        self.assertFalse(schema.valid({
-            "stringvalue": "test",
-            "intvalue": "test",
-        }))
-        self.assertFalse(schema.valid({
-            "stringvalue": 21323,
-        }))
+        schema = Object(
+            {
+                "stringvalue": String().nullable().min(3).enum("test"),
+                "intvalue": Integer().optional().min(3),
+            }
+        )
+        self.assertTrue(
+            schema.valid(
+                {
+                    "stringvalue": None,
+                }
+            )
+        )
+        self.assertTrue(
+            schema.valid(
+                {
+                    "stringvalue": None,
+                    "intvalue": None,
+                }
+            )
+        )
+        self.assertTrue(
+            schema.valid(
+                {
+                    "stringvalue": "test",
+                    "intvalue": 5,
+                }
+            )
+        )
+        self.assertFalse(
+            schema.valid(
+                {
+                    "stringvalue": "test",
+                    "intvalue": "test",
+                }
+            )
+        )
+        self.assertFalse(
+            schema.valid(
+                {
+                    "stringvalue": 21323,
+                }
+            )
+        )
 
     def test_schema_optional(self) -> None:
-        schema = Object({
-            "objectvalue": Object({
-                "key": String().enum("value")
-            }).optional(),
-            "intvalue": Integer().optional().min(3),
-        })
-        self.assertTrue(schema.valid({
-        }))
-        self.assertTrue(schema.valid({
-            "objectvalue": None,
-        }))
-        self.assertTrue(schema.valid({
-            "objectvalue": {
-                "key": "value"
-            },
-            "intvalue": None
-        }))
-        self.assertFalse(schema.valid({
-            "objectvalue": {
-                "key": None
-            },
-            "intvalue": 10
-        }))
-        self.assertFalse(schema.valid({
-            "intvalue": 1
-        }))
+        schema = Object(
+            {
+                "objectvalue": Object({"key": String().enum("value")}).optional(),
+                "intvalue": Integer().optional().min(3),
+            }
+        )
+        self.assertTrue(schema.valid({}))
+        self.assertTrue(
+            schema.valid(
+                {
+                    "objectvalue": None,
+                }
+            )
+        )
+        self.assertTrue(
+            schema.valid({"objectvalue": {"key": "value"}, "intvalue": None})
+        )
+        self.assertFalse(schema.valid({"objectvalue": {"key": None}, "intvalue": 10}))
+        self.assertFalse(schema.valid({"intvalue": 1}))
 
     def test_schema_default(self) -> None:
         schema = Integer().default(5)
@@ -287,39 +309,37 @@ class TestSchemas(unittest.TestCase):
         self.assertEqual(schema(6), 6)
 
     def test_schema_object_equals(self) -> None:
-        schema = Object({
-            "a": 5,
-            "b": 2.1,
-            "c": String().optional(),
-            "d": "hello world",
-            "e": None,
-            "f": [],
-            "g": {}
-        })
-        self.assertTrue(
-            schema.valid({
+        schema = Object(
+            {
                 "a": 5,
                 "b": 2.1,
-                "c": "hello world",
+                "c": String().optional(),
                 "d": "hello world",
                 "e": None,
                 "f": [],
-                "g": {}
-            })
+                "g": {},
+            }
+        )
+        self.assertTrue(
+            schema.valid(
+                {
+                    "a": 5,
+                    "b": 2.1,
+                    "c": "hello world",
+                    "d": "hello world",
+                    "e": None,
+                    "f": [],
+                    "g": {},
+                }
+            )
         )
         self.assertFalse(
-            schema.valid({
-                "a": 5,
-                "b": 2.2,
-                "d": "hello world",
-                "e": None,
-                "f": [],
-                "g": {}
-            })
+            schema.valid(
+                {"a": 5, "b": 2.2, "d": "hello world", "e": None, "f": [], "g": {}}
+            )
         )
-        self.assertFalse(
-            schema.valid({})
-        )
+        self.assertFalse(schema.valid({}))
 
-if __name__ == '__main__':
-    unittest.main(verbosity = 2)
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
