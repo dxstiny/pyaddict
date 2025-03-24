@@ -1,4 +1,4 @@
-from pyaddict.schema import Object, String, Integer, Array, Float
+from pyaddict.schema import Object, String, Integer, Array, Float, OneOf
 
 dict = {
     "name": "John",
@@ -28,9 +28,7 @@ print(schema.error(dict))  # None
 
 badSchema = Object({"name": String().min(5), "age": Float(), "cars": Object()})
 
-print(
-    badSchema.error(dict)
-)  # ValidationError(expected 4 to be greater than or equal to 5, name: min)
+print(badSchema.error(dict))  # expected 4 to be greater than or equal to 5, name: min
 
 staticSchema = Object(
     {
@@ -52,3 +50,10 @@ mixedSchema = Object(
     }
 ).withAdditionalProperties()
 print(mixedSchema.error(dict))  # None
+
+oneOfSchema = OneOf(Object({"name": Integer()}), Object({"age": String()}))
+print(oneOfSchema.error(dict))
+
+# value didn't match any of the schemas at (root): oneOf:
+#   - John is not of type <class 'int'> at name: coerce,
+#   - 30 is not of type <class 'str'> at age: coerce

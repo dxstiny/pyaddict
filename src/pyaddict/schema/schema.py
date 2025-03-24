@@ -202,6 +202,7 @@ class Object(ISchemaType["Object"]):
         if not result:
             return result
 
+        resultDict: JObject = {}
         body = self._body or {}
 
         for key, schema in body.items():
@@ -215,6 +216,7 @@ class Object(ISchemaType["Object"]):
 
             if not isinstance(schema, ISchemaType):
                 if value[key] != schema:
+                    print(value, type(value[key]), type(schema), value[key], schema)
                     result.invalidate(
                         ValidationError(
                             f"expected {value[key]} to equal {schema}", [key], "equals"
@@ -223,11 +225,13 @@ class Object(ISchemaType["Object"]):
                     return result
                 continue
 
+            print(value, key, value[key], schema)
             keyRes = schema.validate(value[key])
+            print("keyRes", keyRes)
             if not keyRes:
                 result.invalidate(ValidationError.inherit(keyRes.error, [key]))
                 return result
-            value[key] = keyRes.unwrap()
+            resultDict[key] = keyRes.unwrap()
 
         if not self._allowAdditionalProperties:
             for key in result.unwrap():
@@ -239,7 +243,7 @@ class Object(ISchemaType["Object"]):
                     )
                     return result
 
-        return result
+        return result.update(ValidationResult.ok(resultDict))
 
 
 class Array(ISchemaType["Array"], IWithLength[List[Any], "Array"]):
@@ -291,5 +295,7 @@ class OneOf(ISchemaType["OneOf"]):
             assert res.error
             errors.append(res.error)
         return ValidationResult.err(
-            ValidationError("value didn't match any of the schemas", [], "oneOf")
+            ValidationError(
+                "value didn't match any of the schemas", [], "oneOf", cause=errors
+            )
         )

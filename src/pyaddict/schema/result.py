@@ -1,8 +1,8 @@
 """json schema validation inspired by zod"""
-from __future__ import annotations
-from typing import List, Optional, Generic,TypeVar
-from enum import Enum
 
+from __future__ import annotations
+from typing import List, Optional, Generic, TypeVar, cast
+from enum import Enum
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -10,36 +10,46 @@ U = TypeVar("U")
 
 class ValidationState(Enum):
     """ValidationState"""
+
     Valid = 0
     Invalid = 1
 
 
 class ValidationError(ValueError):
     """ValidationError"""
-    __slots__ = ("_message", "_path", "_validation")
 
-    def __init__(self,
-                 message: str,
-                 path: List[str],
-                 validation: str) -> None:
+    __slots__ = ("_message", "_path", "_validation", "_cause")
+
+    def __init__(
+        self,
+        message: str,
+        path: List[str],
+        validation: str,
+        cause: List[ValidationError] | None = None,
+    ) -> None:
         super().__init__(message)
         self._message = message
         self._path = path
         self._validation = validation
+        self._cause = cause or []
 
     def __repr__(self) -> str:
-        return f"ValidationError({self._message}, {self.formattedPath})"
+        return f"ValidationError({self})"
 
     def __str__(self) -> str:
-        return self.__repr__()
+        result = f"{self._message} at {self.formattedPath}"
+        if self._cause:
+            result += ": \n"
+            result += ",\n".join([f"\t- {x}" for x in self._cause])
+        return result
 
     @property
     def formattedPath(self) -> str:
         """a friendly path for the error"""
         if len(self._path) == 0:
-            return '(root): ' + self._validation
-        path = [ str(p) for p in self._path ]
-        return '.'.join(path) + ': ' + self._validation
+            return "(root): " + self._validation
+        path = [str(p) for p in self._path]
+        return ".".join(path) + ": " + self._validation
 
     @property
     def path(self) -> List[str]:
@@ -56,22 +66,32 @@ class ValidationError(ValueError):
         """the validation that failed"""
         return self._validation
 
+    @property
+    def cause(self) -> List[ValidationError]:
+        """conatined errors used to trace"""
+        return self._cause
+
     @staticmethod
     def inherit(error: Optional[ValidationError], path: List[str]) -> ValidationError:
         """inherit a ValidationError (combines the paths)"""
         assert error is not None
-        return ValidationError(error.message, path + error.path, error.validation)
+        return ValidationError(
+            error.message, path + error.path, error.validation, error.cause
+        )
 
 
 class ValidationResult(Generic[T]):
     """OptionalData"""
+
     __slots__ = ("_state", "_data", "_error", "_nullable")
 
-    def __init__(self,
-                 state: ValidationState,
-                 data: Optional[T] = None,
-                 error: Optional[ValidationError] = None,
-                 nullable: bool = False) -> None:
+    def __init__(
+        self,
+        state: ValidationState,
+        data: Optional[T] = None,
+        error: Optional[ValidationError] = None,
+        nullable: bool = False,
+    ) -> None:
         self._state = state
         self._data = data
         self._error = error
@@ -92,7 +112,7 @@ class ValidationResult(Generic[T]):
     def _assertReturnData(self) -> T:
         if not self._nullable:
             assert self._data is not None
-        return self._data # type: ignore # TODO(dxstiny) somehow return Optional[T]
+        return cast(T, self._data)
 
     def unwrap(self) -> T:
         """unwrap the value if valid, otherwise raise an error"""
@@ -116,7 +136,7 @@ class ValidationResult(Generic[T]):
             return self._assertReturnData()
         if msg is None:
             assert self._error is not None
-            raise self._error # pylint: disable=raising-bad-type # (mypy bug)
+            raise self._error
         raise ValueError(msg)
 
     @property
@@ -129,10 +149,13 @@ class ValidationResult(Generic[T]):
         self._state = ValidationState.Invalid
         self._error = error
 
-    def update(self, value: ValidationResult[T]) -> None:
+    def update(self, value: ValidationResult[T]) -> ValidationResult[T]:
         """update the value"""
         if not value:
             self.invalidate(value.error)
+        else:
+            self._data = value.unwrap()
+        return self
 
     @staticmethod
     def ok(data: U, nullable: bool = False) -> ValidationResult[U]:

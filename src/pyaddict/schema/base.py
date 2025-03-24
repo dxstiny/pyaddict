@@ -89,7 +89,7 @@ class ISchemaType(ABC, Generic[IS], INullable[IS]):
             )
 
         # str -> dict
-        if to in (dict, list) and isinstance(value, str):  # type: ignore # (comparison-overlap)
+        if to in (dict, list) and isinstance(value, str):
             return ValidationResult.ok(json.loads(value))
 
         try:
@@ -143,10 +143,10 @@ class IWithEnum(ABC, Generic[T, IS], INullable[IS]):
     def validate(self, value: T) -> ValidationResult[T]:
         """validate the value"""
         if not self._enum:
-            return ValidationResult.ok(value)
+            return ValidationResult.ok(value, self._nullable)
 
         if self._nullable and value is None:
-            return ValidationResult.ok(value, True)  # type: ignore
+            return ValidationResult.ok(value, True)
 
         if value not in self._enum:
             return ValidationResult.err(
@@ -177,7 +177,7 @@ class IWithLength(ABC, Generic[T, IS], INullable[IS]):
     def validate(self, value: T) -> ValidationResult[T]:
         """validate the value"""
         if self._nullable and value is None:
-            return ValidationResult.ok(value, True)  # type: ignore
+            return ValidationResult.ok(value, True)
 
         if self._min is not None:
             length = self.length(value)
