@@ -225,7 +225,9 @@ class Object(ISchemaType["Object"]):
                     return result
                 continue
 
+            print(value, key, value[key], schema)
             keyRes = schema.validate(value[key])
+            print("keyRes", keyRes)
             if not keyRes:
                 result.invalidate(ValidationError.inherit(keyRes.error, [key]))
                 return result
