@@ -50,11 +50,12 @@ class String(
         if not result:
             return result
 
-        result.update(IWithEnum.validate(self, result.unwrap()))
+        value = result.unwrap()
+        result.update(IWithEnum.validate(self, value))
         if not result:
             return result
 
-        result.update(IWithLength.validate(self, result.unwrap()))
+        result.update(IWithLength.validate(self, value))
         if not result:
             return result
 
@@ -112,11 +113,12 @@ class Integer(
         if not result:
             return result
 
-        result.update(IWithEnum.validate(self, result.unwrap()))
+        value = result.unwrap()
+        result.update(IWithEnum.validate(self, value))
         if not result:
             return result
 
-        result.update(IWithLength.validate(self, result.unwrap()))
+        result.update(IWithLength.validate(self, value))
         return result
 
     def length(self, value: int) -> int:
@@ -145,6 +147,7 @@ class Float(
         if not result:
             return result
 
+        value = result.unwrap()
         result.update(IWithEnum.validate(self, value))
         if not result:
             return result
@@ -165,6 +168,7 @@ class Boolean(ISchemaType["Boolean"], IWithEnum[bool, "Boolean"]):
         result = self._coerceValue(value, bool)
         if not result:
             return result
+        value = result.unwrap()
         result.update(IWithEnum.validate(self, value))
         return result
 
@@ -202,6 +206,7 @@ class Object(ISchemaType["Object"]):
         if not result:
             return result
 
+        value = result.unwrap()
         resultDict: JObject = {}
         body = self._body or {}
 
@@ -233,7 +238,11 @@ class Object(ISchemaType["Object"]):
                 return result
             resultDict[key] = keyRes.unwrap()
 
-        if not self._allowAdditionalProperties:
+        if self._allowAdditionalProperties:
+            for key, v in value.items():
+                if key not in resultDict:
+                    resultDict[key] = v
+        else:
             for key in result.unwrap():
                 if key not in body:
                     result.invalidate(
@@ -260,12 +269,13 @@ class Array(ISchemaType["Array"], IWithLength[List[Any], "Array"]):
         if not result:
             return result
 
-        result.update(IWithLength.validate(self, result.unwrap()))
+        value = result.unwrap()
+        result.update(IWithLength.validate(self, value))
         if not result:
             return result
 
         values: List[Any] = []
-        for item in result.unwrap():
+        for item in value:
             res = self._item.validate(item)
             if not res.valid():
                 result.invalidate(ValidationError.inherit(res.error, ["[]"]))

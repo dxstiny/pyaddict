@@ -97,7 +97,6 @@ class ISchemaType(ABC, Generic[IS], INullable[IS]):
 
             if value is None:
                 return ValidationResult.ok(to())
-
             return ValidationResult.ok(to(value))  # type: ignore
         except:  # pylint: disable=bare-except
             return ValidationResult.err(
