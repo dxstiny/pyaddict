@@ -217,11 +217,12 @@ class Object(ISchemaType["Object"]):
                         ValidationError(f"expected {key} to be present", [], "required")
                     )
                     return result
+                if isinstance(schema, ISchemaType) and schema._default: # pylint: disable=protected-access
+                    resultDict[key] = schema._default # pylint: disable=protected-access
                 continue
 
             if not isinstance(schema, ISchemaType):
                 if value[key] != schema:
-                    print(value, type(value[key]), type(schema), value[key], schema)
                     result.invalidate(
                         ValidationError(
                             f"expected {value[key]} to equal {schema}", [key], "equals"
@@ -230,9 +231,7 @@ class Object(ISchemaType["Object"]):
                     return result
                 continue
 
-            print(value, key, value[key], schema)
             keyRes = schema.validate(value[key])
-            print("keyRes", keyRes)
             if not keyRes:
                 result.invalidate(ValidationError.inherit(keyRes.error, [key]))
                 return result

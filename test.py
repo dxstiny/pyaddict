@@ -308,6 +308,11 @@ class TestSchemas(unittest.TestCase):
         self.assertTrue(schema.valid(6))
         self.assertEqual(schema(6), 6)
 
+        obj = Object({"test": Integer().default(5).optional()})
+        self.assertTrue(obj.valid({}))
+        self.assertIn("test", obj({}))
+        self.assertEqual(obj({})["test"], 5)
+
     def test_schema_object_equals(self) -> None:
         schema = Object(
             {
