@@ -1,4 +1,4 @@
-from . import Boolean, Integer, Object, OneOf
+from . import Boolean, Integer, OneOf
 
 
 def test_one_of() -> None:

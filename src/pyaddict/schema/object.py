@@ -135,6 +135,15 @@ class _Object[R](ISchemaType["_Object[R]", R]):
 
         return cast(ValidationResult[R], result)
 
+    def __getitem__(self, key: str) -> Validatable:
+        return self._body[key]
+
+    def __setitem__(self, key: str, schema: Validatable) -> Validatable | None:
+        self._body[key] = schema
+
+    def __delitem__(self, key: str) -> None:
+        del self._body[key]
+
 
 Object = _Object[dict[str, Any]]
 OptionalObject = _Object[dict[str, Any] | None]

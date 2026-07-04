@@ -16,12 +16,12 @@ def test_no_chain() -> None:
 
 
 def test_chain() -> None:
-    l = JList(data).chain()
-    l.expect(0, dict)
-    l.expect(1, dict)
-    l.expect("0", dict)
-    assert l.expect("[0].name", str) == data[0]["name"]
+    item = JList(data).chain()
+    item.expect(0, dict)
+    item.expect(1, dict)
+    item.expect("0", dict)
+    assert item.expect("[0].name", str) == data[0]["name"]
     with pytest.raises(KeyError):
-        l.optional_get("0.test")
-    assert l.optional_get("b?.d") is None
-    assert l.expect("[].name", list) == [x["name"] for x in data]
+        item.optional_get("0.test")
+    assert item.optional_get("b?.d") is None
+    assert item.expect("[].name", list) == [x["name"] for x in data]

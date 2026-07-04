@@ -50,3 +50,15 @@ def test_default_items() -> None:
     assert schema.validate({"default": None}).unwrap()["default"] == "value"
     assert schema.validate({"default": "something"})
     assert schema.validate({"default": "something"}).unwrap()["default"] == "something"
+
+
+def test_modify_schema() -> None:
+    schema = Object({"first": "schema"})
+    assert schema.validate({"first": "schema"})
+    assert schema["first"] == "schema"
+    schema["first"] = Integer()
+    assert not schema.validate({"first": "schema"})
+    assert schema.validate({"first": 1})
+    schema["second"] = Integer()
+    assert not schema.validate({"first": 1})
+    assert schema.validate({"first": 1, "second": 2})
