@@ -1,8 +1,9 @@
 """json schema validation inspired by zod"""
 
 from __future__ import annotations
-from typing import List, Optional, Generic, TypeVar, cast
+
 from enum import Enum
+from typing import Generic, List, Optional, TypeVar, cast
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -37,14 +38,14 @@ class ValidationError(ValueError):
         return f"ValidationError({self})"
 
     def __str__(self) -> str:
-        result = f"{self._message} at {self.formattedPath}"
+        result = f"{self._message} at {self.formatted_path}"
         if self._cause:
             result += ": \n"
             result += ",\n".join([f"\t- {x}" for x in self._cause])
         return result
 
     @property
-    def formattedPath(self) -> str:
+    def formatted_path(self) -> str:
         """a friendly path for the error"""
         if len(self._path) == 0:
             return "(root): " + self._validation
@@ -68,7 +69,7 @@ class ValidationError(ValueError):
 
     @property
     def cause(self) -> List[ValidationError]:
-        """conatined errors used to trace"""
+        """contained errors used to trace"""
         return self._cause
 
     @staticmethod
@@ -109,7 +110,7 @@ class ValidationResult(Generic[T]):
             return f"ValidationResult({self._data})"
         return f"ValidationResult({self._error})"
 
-    def _assertReturnData(self) -> T:
+    def _assert_return_data(self) -> T:
         if not self._nullable:
             assert self._data is not None
         return cast(T, self._data)
@@ -117,13 +118,13 @@ class ValidationResult(Generic[T]):
     def unwrap(self) -> T:
         """unwrap the value if valid, otherwise raise an error"""
         if self._state == ValidationState.Valid:
-            return self._assertReturnData()
+            return self._assert_return_data()
         raise ValueError("unwrap called on invalid value")
 
-    def unwrapOr(self, default: T) -> T:
+    def unwrap_or(self, default: T) -> T:
         """unwrap the value if valid, otherwise return the default"""
         if self._state == ValidationState.Valid:
-            return self._assertReturnData()
+            return self._assert_return_data()
         return default
 
     def expect(self, msg: Optional[str] = None) -> T:
@@ -133,16 +134,21 @@ class ValidationResult(Generic[T]):
         otherwise raise the original error
         """
         if self._state == ValidationState.Valid:
-            return self._assertReturnData()
+            return self._assert_return_data()
         if msg is None:
             assert self._error is not None
             raise self._error
         raise ValueError(msg)
 
     @property
-    def error(self) -> Optional[ValidationError]:
+    def error(self) -> ValidationError | None:
         """the error if invalid"""
         return self._error
+
+    @property
+    def value(self) -> T | None:
+        """the value if valid"""
+        return self._data
 
     def invalidate(self, error: Optional[ValidationError] = None) -> None:
         """invalidate the value"""

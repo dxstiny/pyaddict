@@ -1,29 +1,27 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
 name = "pyaddict"
-version = "1.2.2"
-authors = [
-  { name="dxstiny", email="dxstiny.gh@gmail.com" },
-]
+version = "2.0.0"
 description = "yet another dict library"
 readme = "README.md"
-license = { file="LICENSE" }
-requires-python = ">=3.9"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+authors = [
+    { name = "davidohnee", email = "dxstiny.gh@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.9.26,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+lint = [
+    "ruff>=0.15.20",
+    "ty>=0.0.56",
 ]
 
-[project.urls]
-"Homepage" = "https://github.com/dxstiny/pyaddict"
-"Bug Tracker" = "https://github.com/dxstiny/pyaddict/issues"
-
-[classifiers]
-"Typing :: Typed" = "True"
-
-[package]
-include = ["py.typed"]
+[tool.ruff]
+fix = true
+lint.select = ["E", "F", "N", "B", "Q"]
