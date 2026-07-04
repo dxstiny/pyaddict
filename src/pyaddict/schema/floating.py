@@ -68,7 +68,12 @@ class _Float[R](ISchemaType["_Float[R]", R]):
         if not result or result.value is None:
             return cast(ValidationResult[R], result)
 
-        for test in [CoerceFloatTest(self._coerce), RangeSchemaTest(self._range)]:
+        result.update(CoerceFloatTest(self._coerce).test(result.unwrap_or(value), path))
+
+        if not result:
+            return cast(ValidationResult[R], result)
+
+        for test in [RangeSchemaTest(self._range)]:
             result.update(test.test(result.unwrap_or(value), path))
 
         return cast(ValidationResult[R], result)

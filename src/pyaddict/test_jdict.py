@@ -22,4 +22,5 @@ def test_chain() -> None:
     assert JDict(data).chain().expect("a.b[].c", list) == [1, 2]
     with pytest.raises(KeyError):
         JDict(data).chain().optional_get("b.d")
-    assert JDict(data).chain().optional_get("b?.d") is None
+    assert JDict(data).chain().optional_get("a?.d?") is None
+    assert JDict(data).chain().optional_get("a.b.[3]?.c", int) is None

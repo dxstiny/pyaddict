@@ -98,12 +98,13 @@ class ValidationResult(Generic[T]):
         self._error = error
         self._nullable = nullable
 
+    @property
     def valid(self) -> bool:
         """is the value valid?"""
         return self._state == ValidationState.Valid
 
     def __bool__(self) -> bool:
-        return self.valid()
+        return self.valid
 
     def __repr__(self) -> str:
         if self._state == ValidationState.Valid:

@@ -132,8 +132,14 @@ class _String[R](ISchemaType["_String[R]", R]):
         if not result or result.value is None:
             return cast(ValidationResult[R], result)
 
+        result.update(
+            CoerceStringTest(self._coerce).test(result.unwrap_or(value), path)
+        )
+
+        if not result:
+            return cast(ValidationResult[R], result)
+
         for test in [
-            CoerceStringTest(self._coerce),
             EnumSchemaTest(self._enum),
             RegexTest(self._regex),
         ]:

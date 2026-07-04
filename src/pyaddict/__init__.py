@@ -1,2 +1,4 @@
-def hello() -> str:
-    return "Hello from pyaddict!"
+from pyaddict.jdict import JDict
+from pyaddict.jlist import JList
+
+__all__ = ["JDict", "JList"]

@@ -23,5 +23,5 @@ def test_chain() -> None:
     assert item.expect("[0].name", str) == data[0]["name"]
     with pytest.raises(KeyError):
         item.optional_get("0.test")
-    assert item.optional_get("b?.d") is None
+    assert item.optional_get("?.b?.d") is None
     assert item.expect("[].name", list) == [x["name"] for x in data]
