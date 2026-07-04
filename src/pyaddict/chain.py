@@ -69,7 +69,7 @@ class ChainLink:
     @classmethod
     def create_chain(
         cls, chain: str, *, allow_first_int: bool = False
-    ) -> list[ChainLink]:
+    ) -> list["ChainLink"]:
         if allow_first_int:
             chain = re.sub(r"^(\d+).", r"[\1].", chain)
             if re.match(r"^\d+$", chain):
