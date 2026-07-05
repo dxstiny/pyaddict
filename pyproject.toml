@@ -3,11 +3,16 @@ name = "pyaddict"
 version = "2.0.0"
 description = "yet another dict library"
 readme = "README.md"
+license = { file="LICENSE" }
 authors = [
     { name = "davidohnee", email = "dxstiny.gh@gmail.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 
 [project.urls]
 Homepage = "https://github.com/davidohnee/pyaddict"

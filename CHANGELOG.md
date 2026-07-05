@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - new `unchain()` to disable chaining
 
 ### Changed
+- Changed licence from MPL-2.0 to MIT
 - now uses snake_case
 - JDict / JList:
   - `ensureCast()` -> `ensure_cast()`
