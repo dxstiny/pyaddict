@@ -1,3 +1,5 @@
+"""Boolean schema definition."""
+
 from typing import Any, cast
 
 from pyaddict.schema.base import (
@@ -7,7 +9,7 @@ from pyaddict.schema.base import (
 from pyaddict.schema.result import ValidationError, ValidationResult
 
 
-class CoerceBoolTest(ISchemaTest):
+class _CoerceBoolTest(ISchemaTest):
     def __init__(self, coerce: bool) -> None:
         super().__init__()
         self._coerce = coerce
@@ -58,7 +60,7 @@ class _Boolean[R](ISchemaType["_Boolean[R]", R]):
         if not result or result.value is None:
             return cast(ValidationResult[R], result)
 
-        for test in [CoerceBoolTest(self._coerce)]:
+        for test in [_CoerceBoolTest(self._coerce)]:
             result.update(test.test(result.unwrap_or(value), path))
 
         return cast(ValidationResult[R], result)

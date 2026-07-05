@@ -75,8 +75,14 @@ def test_chain_optional_get() -> None:
     jlist = JList(data).chain()
     assert jlist.optional_get(0, dict)
     assert jlist.optional_get("0", str) is None
+    with pytest.raises(KeyError):
+        assert jlist.optional_get("0.car.test", str, "test")
     assert jlist.optional_get("c", str, "test") == "test"
+    with pytest.raises(TypeError):
+        assert jlist.optional_get("c.age", str, "test")
     assert jlist.optional_get("4", str, "test") == "test"
+    with pytest.raises(IndexError):
+        assert jlist.optional_get("4.age", str, "test")
     assert jlist.optional_get("0.age", str) is None
     assert jlist.optional_get("0.age", int) == 12
     assert jlist.optional_get("0.age", float) is None

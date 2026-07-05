@@ -1,47 +1,58 @@
+"""Chaining definition and helpers."""
+
 import re
 from typing import Any
 
 
 class ChainLink:
-    """chain link"""
+
+    """chain link."""
 
     __slots__ = ("_key", "_optional", "_index", "_create_array")
 
     def __init__(
         self, key: str | int | None, optional: bool = False, create_array: bool = False
     ) -> None:
+        """Create new chain link object."""
         self._key: str | int | None = key
         self._optional = optional
         self._create_array = create_array
         self._index = isinstance(key, int)
 
     def __repr__(self) -> str:
+        """
+        Return string representation.
+
+        Returns:
+            String representation.
+
+        """
         return f"ChainLink({self._key}, optional={self._optional}, index={
             self._index
         }, create_array={self._create_array})"
 
     @property
     def key(self) -> str | int | None:
-        """returns the key"""
+        """Key."""
         return self._key
 
     @property
     def int_key(self) -> int:
-        """returns the key as an int"""
+        """Key as an int."""
         if not isinstance(self._key, int):
             return -1
         return self._key
 
     @property
     def str_key(self) -> str:
-        """returns the key as a string"""
+        """Key as a string."""
         if not isinstance(self._key, str):
             return ""
         return self._key
 
     @property
     def optional(self) -> bool:
-        """returns true if the link is optional"""
+        """True if the link is optional."""
         return self._optional
 
     @optional.setter
@@ -50,24 +61,27 @@ class ChainLink:
 
     @property
     def create_array(self) -> bool:
-        """returns true if the link splits into an array"""
+        """True if the link splits into an array."""
         return self._create_array
 
     @property
     def index(self) -> bool:
-        """returns true if the link is an index"""
+        """True if the link is an index."""
         return self._index
 
     @property
     def expect_object(self) -> bool:
+        """Whether the link can be used on a dict."""
         return not self.expect_list
 
     @property
     def expect_list(self) -> bool:
+        """Whether the link can be used on a list."""
         return self.create_array or self.index
 
     @property
     def stringify(self) -> str:
+        """The friendly path."""
         out: str = self.str_key
         if self._create_array:
             out = "[]"
@@ -79,6 +93,17 @@ class ChainLink:
 
     @classmethod
     def create(cls, key: str, *, optional: bool = False) -> "ChainLink":
+        """
+        Parse and create a single chain link.
+
+        Args:
+            key: link key to parse
+            optional: force optional
+
+        Returns:
+            chain link
+
+        """
         if key.endswith("?"):
             key = key[:-1]
             optional = True
@@ -92,6 +117,13 @@ class ChainLink:
     def create_chain(
         cls, chain: str, *, allow_first_int: bool = False, last_optional: bool = False
     ) -> list["ChainLink"]:
+        """
+        Parse and return a chain.
+
+        Returns:
+            full chain.
+
+        """
         if allow_first_int:
             chain = re.sub(r"^(\d+).", r"[\1].", chain)
             if re.match(r"^\d+$", chain):
@@ -105,14 +137,31 @@ class ChainLink:
 
     @staticmethod
     def path(stack: list["ChainLink"]) -> str:
+        """
+        Return the friendly path.
+
+        Returns:
+            friendly path.
+
+        """
         return ".".join([x.stringify for x in stack])
 
 
 def traverse(
     obj: Any, chain: list[ChainLink], *, stack: list[ChainLink] | None = None
 ) -> Any | None:
-    print(chain, obj)
+    """
+    Resolve the chain recursively.
 
+    Returns:
+        obj: if chain end found.
+        None: if link optional and not found.
+
+    Raises:
+        IndexError: if a non-optional index is out of range
+        KeyError: if a non-optional key is not found
+
+    """
     if len(chain) == 0 or obj is None:
         return obj
 

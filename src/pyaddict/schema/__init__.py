@@ -1,3 +1,5 @@
+"""Schema validation."""
+
 from .anything import Anything
 from .array import Array
 from .base import SchemaType

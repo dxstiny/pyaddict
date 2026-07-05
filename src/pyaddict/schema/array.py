@@ -1,3 +1,5 @@
+"""Array schema definition."""
+
 import json
 from typing import Any, cast
 
@@ -13,7 +15,7 @@ from pyaddict.schema.common import RangeSchemaTest, validate
 from pyaddict.schema.result import ValidationError, ValidationResult
 
 
-class CoerceArrayTest(ISchemaTest):
+class _CoerceArrayTest(ISchemaTest):
     def __init__(self, coerce: bool) -> None:
         super().__init__()
         self._coerce = coerce
@@ -77,7 +79,7 @@ class _Array[R](ISchemaType["_Array[R]", R]):
         if not result or result.value is None:
             return cast(ValidationResult[R], result)
 
-        for test in [CoerceArrayTest(self._coerce)]:
+        for test in [_CoerceArrayTest(self._coerce)]:
             result.update(test.test(result.unwrap_or(value), path))
 
         list_like = result.unwrap_or(value)

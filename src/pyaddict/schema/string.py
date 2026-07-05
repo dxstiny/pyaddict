@@ -1,3 +1,5 @@
+"""String schema definition."""
+
 import re
 from dataclasses import dataclass
 from typing import Any, cast
@@ -14,7 +16,7 @@ from pyaddict.schema.result import ValidationError, ValidationResult
 
 
 @dataclass
-class RegexCheck:
+class _RegexCheck:
     DEFAULT_MESSAGE = "string didn't match {regex}"
 
     regex: str | re.Pattern[str]
@@ -29,8 +31,8 @@ class RegexCheck:
         return self.message_template.format(regex=self.regex)
 
 
-class RegexTest(ISchemaTest):
-    def __init__(self, checks: list[RegexCheck]) -> None:
+class _RegexTest(ISchemaTest):
+    def __init__(self, checks: list[_RegexCheck]) -> None:
         super().__init__()
         self._checks = checks
 
@@ -46,7 +48,7 @@ class RegexTest(ISchemaTest):
         return ValidationResult.ok(val)
 
 
-class CoerceStringTest(ISchemaTest):
+class _CoerceStringTest(ISchemaTest):
     def __init__(self, coerce: bool) -> None:
         super().__init__()
         self._coerce = coerce
@@ -82,7 +84,7 @@ class _String[R](ISchemaType["_String[R]", R]):
         super().__init__()
         self._range = Range[int]()
         self._enum = set[R]()
-        self._regex: list[RegexCheck] = []
+        self._regex: list[_RegexCheck] = []
 
     def min(self, val: int, *, inclusive: bool = True) -> "_String[R]":
         self._range.min = RangePoint(val, RangePointType.is_inclusive(inclusive))
@@ -103,9 +105,9 @@ class _String[R](ISchemaType["_String[R]", R]):
         self, pattern: str | re.Pattern[str], error_description: str | None = None
     ) -> "_String[R]":
         self._regex.append(
-            RegexCheck(
+            _RegexCheck(
                 regex=pattern,
-                message_template=error_description or RegexCheck.DEFAULT_MESSAGE,
+                message_template=error_description or _RegexCheck.DEFAULT_MESSAGE,
             )
         )
         return self
@@ -133,7 +135,7 @@ class _String[R](ISchemaType["_String[R]", R]):
             return cast(ValidationResult[R], result)
 
         result.update(
-            CoerceStringTest(self._coerce).test(result.unwrap_or(value), path)
+            _CoerceStringTest(self._coerce).test(result.unwrap_or(value), path)
         )
 
         if not result:
@@ -141,7 +143,7 @@ class _String[R](ISchemaType["_String[R]", R]):
 
         for test in [
             EnumSchemaTest(self._enum),
-            RegexTest(self._regex),
+            _RegexTest(self._regex),
         ]:
             result.update(test.test(result.unwrap_or(value), path))
 

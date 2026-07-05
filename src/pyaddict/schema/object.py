@@ -1,3 +1,5 @@
+"""Object schema definition."""
+
 import json
 from typing import Any, cast
 
@@ -10,7 +12,7 @@ from pyaddict.schema.common import validate
 from pyaddict.schema.result import ValidationError, ValidationResult
 
 
-class CoerceObjectTest(ISchemaTest):
+class _CoerceObjectTest(ISchemaTest):
     def __init__(self, coerce: bool) -> None:
         super().__init__()
         self._coerce = coerce
@@ -70,7 +72,7 @@ class _Object[R](ISchemaType["_Object[R]", R]):
         if not result or result.value is None:
             return cast(ValidationResult[R], result)
 
-        for test in [CoerceObjectTest(self._coerce)]:
+        for test in [_CoerceObjectTest(self._coerce)]:
             result.update(test.test(result.unwrap_or(value), path))
 
         if isinstance(value, dict):

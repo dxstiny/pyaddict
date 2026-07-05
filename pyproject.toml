@@ -31,4 +31,8 @@ lint = [
 
 [tool.ruff]
 fix = true
-lint.select = ["E", "F", "N", "B", "Q"]
+lint.select = ["B", "D", "DOC", "E", "F", "N", "Q", "PYI"]
+lint.ignore = ["DOC502", "D212", "D211"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/test*.py" = ["D"]

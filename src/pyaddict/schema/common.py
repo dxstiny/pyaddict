@@ -1,3 +1,5 @@
+"""Common helpers."""
+
 from typing import Any
 
 from pyaddict.schema.base import (
@@ -11,11 +13,22 @@ from pyaddict.schema.result import ValidationError, ValidationResult
 
 
 class EnumSchemaTest[R](ISchemaTest):
+
+    """Enum schema test."""
+
     def __init__(self, items: set[R]) -> None:
+        """Create new enum schema test."""
         super().__init__()
         self._items = items
 
     def test[T](self, val: T, path: list[str]) -> ValidationResult[T]:
+        """
+        Test whether `val` is included in the enum.
+
+        Returns:
+            ValidationResult.
+
+        """
         if not self._items or val in self._items:
             return ValidationResult.ok(val)
         return ValidationResult.err(
@@ -24,11 +37,22 @@ class EnumSchemaTest[R](ISchemaTest):
 
 
 class RangeSchemaTest(ISchemaTest):
+
+    """Range schema test."""
+
     def __init__(self, range: Range | None = None) -> None:
+        """Create new range schema test."""
         super().__init__()
         self._range = range
 
     def test[T](self, val: T, path: list[str]) -> ValidationResult[T]:
+        """
+        Test whether `val` is in the provided range.
+
+        Returns:
+            ValidationResult.
+
+        """
         if not self._range:
             return ValidationResult.ok(val)
 
@@ -88,6 +112,13 @@ class RangeSchemaTest(ISchemaTest):
 def validate(
     val: Any, schema: Validatable, *, path: list[str]
 ) -> ValidationResult[Any]:
+    """
+    Validate `val` against the validatable.
+
+    Returns:
+        ValidationResult.
+
+    """
     if isinstance(schema, ISchemaType):
         return schema.validate(val, path=path)
     if val == schema:

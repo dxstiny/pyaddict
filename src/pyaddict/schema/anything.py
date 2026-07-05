@@ -1,3 +1,5 @@
+"""Anything schema definition."""
+
 from typing import Any, cast
 
 from pyaddict.schema.base import ISchemaType
@@ -16,7 +18,7 @@ class _Anything[R](ISchemaType["_Anything[R]", R]):
         result = self._test_nullable(value, path)
 
         if not result or result.value is None:
-            return cast(ValidationResult[R], result)
+            return result
 
         return ValidationResult.ok(value)
 

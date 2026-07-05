@@ -1,3 +1,5 @@
+"""Integer schema definition."""
+
 from typing import Any, cast
 
 from pyaddict.schema.base import (
@@ -11,7 +13,7 @@ from pyaddict.schema.common import RangeSchemaTest
 from pyaddict.schema.result import ValidationError, ValidationResult
 
 
-class CoerceIntTest(ISchemaTest):
+class _CoerceIntTest(ISchemaTest):
     def __init__(self, coerce: bool) -> None:
         super().__init__()
         self._coerce = coerce
@@ -68,7 +70,7 @@ class _Integer[R](ISchemaType["_Integer[R]", R]):
         if not result or result.value is None:
             return cast(ValidationResult[R], result)
 
-        result.update(CoerceIntTest(self._coerce).test(result.unwrap_or(value), path))
+        result.update(_CoerceIntTest(self._coerce).test(result.unwrap_or(value), path))
 
         if not result:
             return cast(ValidationResult[R], result)
