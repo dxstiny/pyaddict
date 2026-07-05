@@ -44,6 +44,10 @@ class ChainLink:
         """returns true if the link is optional"""
         return self._optional
 
+    @optional.setter
+    def optional(self, v: bool) -> None:
+        self._optional = v
+
     @property
     def create_array(self) -> bool:
         """returns true if the link splits into an array"""
@@ -74,8 +78,7 @@ class ChainLink:
         return out
 
     @classmethod
-    def create(cls, key: str) -> "ChainLink":
-        optional = False
+    def create(cls, key: str, *, optional: bool = False) -> "ChainLink":
         if key.endswith("?"):
             key = key[:-1]
             optional = True
@@ -87,16 +90,18 @@ class ChainLink:
 
     @classmethod
     def create_chain(
-        cls, chain: str, *, allow_first_int: bool = False
+        cls, chain: str, *, allow_first_int: bool = False, last_optional: bool = False
     ) -> list["ChainLink"]:
         if allow_first_int:
             chain = re.sub(r"^(\d+).", r"[\1].", chain)
             if re.match(r"^\d+$", chain):
-                return [cls.create(f"[{chain}]")]
+                return [cls.create(f"[{chain}]", optional=last_optional)]
 
         chain = re.sub(r"(\w)\[", r"\1.[", chain)
 
-        return [cls.create(key) for key in chain.split(".")]
+        links = [cls.create(key) for key in chain.split(".")]
+        links[-1].optional = last_optional
+        return links
 
     @staticmethod
     def path(stack: list["ChainLink"]) -> str:
@@ -106,6 +111,8 @@ class ChainLink:
 def traverse(
     obj: Any, chain: list[ChainLink], *, stack: list[ChainLink] | None = None
 ) -> Any | None:
+    print(chain, obj)
+
     if len(chain) == 0 or obj is None:
         return obj
 
@@ -114,8 +121,6 @@ def traverse(
 
     next_link, *next_chain = chain
     stack.append(next_link)
-
-    print(next_link, obj)
 
     if next_link.optional and next_link.key is not None:
         if isinstance(obj, list) and (

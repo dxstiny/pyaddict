@@ -12,12 +12,20 @@ class JList(list):
         self._chainable = chainable
         super().__init__(self._data)
 
-    def _get_item(self, key: int | str) -> None:
+    def _get_item(self, key: int | str, *, optional: bool = False) -> Any | None:
         if self._chainable:
             return traverse(
-                self._data, ChainLink.create_chain(str(key), allow_first_int=True)
+                self._data,
+                ChainLink.create_chain(
+                    str(key), allow_first_int=True, last_optional=optional
+                ),
             )
-        return self._data[int(key)]
+        key = int(key)
+        if 0 <= key < len(self._data):
+            return self._data[int(key)]
+        if optional:
+            return None
+        raise IndexError()
 
     def chain(self) -> "JList":
         self._chainable = True
@@ -41,9 +49,9 @@ class JList(list):
     def optional_get[T](
         self, key: int | str, type_: type[T] | None = None, default: T | None = None
     ) -> T | None:
-        value = self._get_item(key)
-        if type_ and isinstance(value, type_):
-            return value or default
+        value = self._get_item(key, optional=True)
+        if type_ and not isinstance(value, type_):
+            return default
         return value or default
 
     def ensure[T](self, key: int | str, type_: type[T], default: T | None = None) -> T:
@@ -65,5 +73,6 @@ class JList(list):
 
     def expect[T](self, key: int | str, type_: type[T]) -> T:
         val = self._get_item(key)
-        assert isinstance(val, type_)
+        if not isinstance(val, type_):
+            raise TypeError(f"expected {val} to be {type_}, not {type(val)}")
         return val

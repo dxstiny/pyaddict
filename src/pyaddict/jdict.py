@@ -12,10 +12,14 @@ class JDict(dict):
         self._chainable = chainable
         super().__init__(self._data)
 
-    def _get_item(self, key: str) -> None:
+    def _get_item(self, key: str, *, optional: bool = False) -> None:
         if self._chainable:
-            return traverse(self._data, ChainLink.create_chain(key))
-        return self._data[key]
+            return traverse(
+                self._data, ChainLink.create_chain(key, last_optional=optional)
+            )
+        if optional:
+            return self.get(key)
+        return self[key]
 
     def chain(self) -> "JDict":
         self._chainable = True
@@ -39,7 +43,7 @@ class JDict(dict):
     def optional_get[T](
         self, key: str, type_: type[T] | None = None, default: T | None = None
     ) -> Any | T | None:
-        value = self._get_item(key)
+        value = self._get_item(key, optional=True)
         if type_ and not isinstance(value, type_):
             return default
         return value or default
@@ -47,6 +51,7 @@ class JDict(dict):
     def ensure[T](self, key: str, type_: type[T], default: T | None = None) -> T:
         try:
             value = self._get_item(key)
+            print(value)
             if isinstance(value, type_):
                 return value
             return default or type_()
