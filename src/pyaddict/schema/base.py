@@ -1,235 +1,174 @@
-"""json schema validation inspired by zod"""
+"""Schema base helpers."""
 
-from __future__ import annotations
-from typing import List, Optional, Generic, TypeVar, Any, Type
 from abc import ABC, abstractmethod
-import json
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, cast
 
-from .result import ValidationResult, ValidationError
-
-
-T = TypeVar("T")
-U = TypeVar("U")
-IS = TypeVar("IS", bound="ISchemaType[Any]")
+from pyaddict.schema.result import ValidationError, ValidationResult
 
 
-class INullable(Generic[IS]):
-    """Nullable"""
+class ISchemaType[C, T](ABC):
+
+    """Abstract schema base."""
 
     def __init__(self) -> None:
-        super().__init__()
-        self._nullable: bool = False
-
-    def nullable(self) -> IS:
-        """make the value nullable"""
-        self._nullable = True
-        return self  # type: ignore
-
-
-class ISchemaType(ABC, Generic[IS], INullable[IS]):
-    """Schema Type"""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._optional: bool = False
+        """Create new schema definition."""
+        self._default: T | None = None
         self._coerce: bool = False
-        self._default: Optional[Any] = None
+        self._nullable: bool = False
+        self._optional: bool = False
 
-    def coerce(self) -> IS:
-        """coerce the value (float -> int, str -> bool, etc.)"""
-        self._coerce = True
-        return self  # type: ignore
-
-    def optional(self, nullable: bool = True) -> IS:
+    def coerce(self) -> C:
         """
-        make the value optional (e.g., a key does not need to exist)
-        if nullable is `False` and `None` is passed, the result will be invalid
+        Allow value coercion (e.g., str -> int).
+
+        Returns:
+            self.
+
+        """
+        self._coerce = True
+        return cast(C, self)
+
+    def default(self, value: T) -> C:
+        """
+        Set a default value for the validated object, if the data is null or missing.
+
+        Use in combination with `.nullable()` and/or `.optional()`.
+
+        Returns:
+            self.
+
+        """
+        self._default = value
+        return cast(C, self)
+
+    def optional(self) -> C:
+        """
+        Allow the property to be missing.
+
+        Use `.default()` to set a default value for the result.
+
+        Returns:
+            self.
+
         """
         self._optional = True
-        self._nullable = nullable
-        return self  # type: ignore
+        return cast(C, self)
 
-    def default(self, value: T) -> IS:
-        """set the default value"""
-        self._default = value
+    @property
+    def default_value(self) -> T | None:
+        """
+        Default value, if one is set.
+
+        Returns:
+            self.
+
+        """
+        return self._default
+
+    @property
+    def is_optional(self) -> bool:
+        """
+        Whether the property is optional.
+
+        Returns:
+            self.
+
+        """
+        return self._optional
+
+    @abstractmethod
+    def nullable(self) -> Any:
+        """
+        Allow the property to be None/null.
+
+        Use `.default()` to set a default value for the result.
+
+        Returns:
+            self.
+
+        """
         self._nullable = True
-        return self  # type: ignore
+        return self
 
     @abstractmethod
-    def validate(self, value: T) -> ValidationResult[T]:
+    def validate(
+        self, value: Any | None, *, path: list[str] | None = None
+    ) -> ValidationResult[Any]:
         """
-        validates the value
+        Validate the provided value.
 
-        returns a ValidationResult,
-        which contains an error if the value is invalid
-        or the value if valid
+        Returns:
+            ValidationResult.
+
         """
-        return ValidationResult.ok(value)
 
-    def _coerceValue(self, value: Any, to: Type[T]) -> ValidationResult[T]:
-        """coerce the value"""
-        if self._nullable and value is None:
-            return ValidationResult.ok(self._default, True)  # type: ignore
+    def _test_nullable[R](self, value: R, path: list[str]) -> ValidationResult[R]:
+        if value is None:
+            if self._nullable:
+                return ValidationResult.ok(cast(R, self._default), True)
+            else:
+                return ValidationResult.err(
+                    ValidationError("unexpected null value", path, "nullable")
+                )
+        return ValidationResult.ok(value, nullable=self._nullable)
 
-        if not self._coerce:
-            if isinstance(value, to):
-                return ValidationResult.ok(value)
-            return ValidationResult.err(
-                ValidationError(f"{value} is not of type {to}", [], "coerce")
-            )
 
-        # str -> bool
-        if to == bool and isinstance(value, str):
-            if value.lower() in ("true", "1", "yes", "y"):
-                return ValidationResult.ok(True)  # type: ignore
-            if value.lower() in ("false", "0", "no", "n"):
-                return ValidationResult.ok(False)  # type: ignore
-            return ValidationResult.err(
-                ValidationError(f"{value} is not a boolean", [], "coerce")
-            )
+SchemaType = ISchemaType[Any, Any]
+Primitive = int | float | bool | str | dict | list
+Validatable = SchemaType | Primitive
 
-        # str -> dict
-        if to in (dict, list) and isinstance(value, str):
-            return ValidationResult.ok(json.loads(value))
 
-        try:
-            # * -> * (hope & pray)
+class RangePointType(Enum):
 
-            if value is None:
-                return ValidationResult.ok(to())
-            return ValidationResult.ok(to(value))  # type: ignore
-        except:  # pylint: disable=bare-except
-            return ValidationResult.err(
-                ValidationError(f"{value} could not be coerced to {to}", [], "coerce")
-            )
+    """Range point type."""
 
-    def __call__(self, value: T) -> T:
+    EXCLUSIVE = 1
+    INCLUSIVE = 2
+
+    @classmethod
+    def is_inclusive(cls, inclusive: bool) -> "RangePointType":
         """
-        expect the value to be valid,
-        otherwise raise an error
+        Create from boolean.
+
+        Returns:
+            RangePointType.
+
         """
-        return self.expect(value)
-
-    def expect(self, value: T, msg: Optional[str] = None) -> T:
-        """
-        expect the value to be valid,
-        otherwise raise an error with the message, if provided,
-        otherwise raise the original error
-        """
-        return self.validate(value).expect(msg)
-
-    def error(self, value: T) -> Optional[ValidationError]:
-        """
-        get the error if the value is invalid,
-        otherwise return None
-        """
-        return self.validate(value).error
-
-    def valid(self, value: T) -> bool:
-        """
-        is the value valid?
-        """
-        return self.validate(value).valid()
+        if inclusive:
+            return cls.INCLUSIVE
+        return cls.EXCLUSIVE
 
 
-class IWithEnum(ABC, Generic[T, IS], INullable[IS]):
-    """Schema Type with Enum"""
+@dataclass
+class RangePoint[T: (int, float)]:
 
-    def __init__(self) -> None:
-        super().__init__()
-        self._enum: Optional[List[T]] = None
+    """Range point definition."""
 
-    def validate(self, value: T) -> ValidationResult[T]:
-        """validate the value"""
-        if not self._enum:
-            return ValidationResult.ok(value, self._nullable)
-
-        if self._nullable and value is None:
-            return ValidationResult.ok(value, True)
-
-        if value not in self._enum:
-            return ValidationResult.err(
-                ValidationError(f"{value} is not in {self._enum}", [], "enum")
-            )
-        return ValidationResult.ok(value)
-
-    def enum(self, *values: U) -> IS:
-        """set the enum values"""
-        self._enum = list(values)  # type: ignore
-        return self  # type: ignore
+    point: T
+    type: RangePointType = RangePointType.INCLUSIVE
 
 
-class IWithLength(ABC, Generic[T, IS], INullable[IS]):
-    """Schema Type with Length (array, string, etc.)"""
+@dataclass
+class Range[T: (int, float)]:
 
-    def __init__(self) -> None:
-        super().__init__()
-        self._min: Optional[int] = None
-        self._max: Optional[int] = None
-        self._minInclusive: bool = False
-        self._maxInclusive: bool = False
+    """Range specification."""
+
+    min: RangePoint[T] | None = None
+    max: RangePoint[T] | None = None
+
+
+class ISchemaTest(ABC):
+
+    """Abstract base for validation tests."""
 
     @abstractmethod
-    def length(self, value: Any) -> int:
-        """get the length of the value"""
+    def test[T](self, val: T, path: list[str]) -> ValidationResult[T]:
+        """
+        Validate.
 
-    def validate(self, value: T) -> ValidationResult[T]:
-        """validate the value"""
-        if self._nullable and value is None:
-            return ValidationResult.ok(value, True)
+        Returns:
+            ValidationResult.
 
-        if self._min is not None:
-            length = self.length(value)
-
-            if self._minInclusive:
-                if length < self._min:
-                    return ValidationResult.err(
-                        ValidationError(
-                            f"expected {self.length(value)} to be greater than or equal to {self._min}",  # pylint: disable=line-too-long
-                            [],
-                            "min",
-                        )
-                    )
-            else:
-                if length <= self._min:
-                    return ValidationResult.err(
-                        ValidationError(
-                            f"expected {self.length(value)} to be greater than {self._min}",  # pylint: disable=line-too-long
-                            [],
-                            "min",
-                        )
-                    )
-        if self._max is not None:
-            length = self.length(value)
-
-            if self._maxInclusive:
-                if length > self._max:
-                    return ValidationResult.err(
-                        ValidationError(
-                            f"expected {self.length(value)} to be less than or equal to {self._max}",  # pylint: disable=line-too-long
-                            [],
-                            "max",
-                        )
-                    )
-            else:
-                if length >= self._max:
-                    return ValidationResult.err(
-                        ValidationError(
-                            f"expected {self.length(value)} to be less than {self._max}",  # pylint: disable=line-too-long
-                            [],
-                            "max",
-                        )
-                    )
-        return ValidationResult.ok(value)
-
-    def min(self, min_: int, inclusive: bool = True) -> IS:
-        """set the min length"""
-        self._min = min_
-        self._minInclusive = inclusive
-        return self  # type: ignore
-
-    def max(self, max_: int, inclusive: bool = True) -> IS:
-        """set the max length"""
-        self._max = max_
-        self._maxInclusive = inclusive
-        return self  # type: ignore
+        """

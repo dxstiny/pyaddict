@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
-"""pyaddict"""
+"""Yet another dict library for type-safety."""
 
-__copyright__ = "Copyright (c) 2022 https://github.com/dxstiny"
+from .jdict import JDict
+from .jlist import JList
 
-from pyaddict.pyaddict import *
+__all__ = ["JDict", "JList"]

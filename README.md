@@ -13,85 +13,109 @@ pip install pyaddict
 ```
 
 ## Usage
-```python
-from pyaddict import JDict, JList
-from pyaddict.schema import Object, String, Integer, Array
 
-jdict = JDict({
+### Accessing json data
+
+```python
+from pyaddict import JDict
+
+data = {
     "name": "John",
     "age": 30,
     "cars": [
         {"model": "BMW 230", "mpg": 27.5},
         {"model": "Ford Edge", "mpg": 24.1}
     ]
-})
+}
 
-# dicts
-print(jdict.ensure("name", str))  # John
-print(jdict.ensure("age", int))  # 30
-print(jdict.ensure("age", str))  # ""
-print(jdict.ensureCast("age", str))  # "30"
-print(jdict.optionalGet("age", str)) # None
-print(jdict.optionalCast("age", str))  # "30"
-print(jdict.optionalGet("gender", str)) # None
-print(jdict.optionalCast("gender", str)) # None
-print(jdict.ensure("gender", str)) # ""
+jdict = JDict(data).chain()  # enable chaining
 
-# lists
-cars = jdict.ensureCast("cars", JList)
-print(cars.assertGet(1, dict))  # {'model': 'Ford Edge', 'mpg': 24.1}
-print(cars.assertGet(2, dict))  # AssertionError
+jdict.expect("name", str)  # "John"
+jdict.expect("name", int)  # TypeError: name is str, not int
+jdict.expect("address", str)  # KeyError: key 'address' not found
+jdict.expect("cars[0].mpg", float)  # 27.5 (because we enabled chaining)
 
-# iterators
-for car in cars.iterator().ensureCast(JDict):
-    print(car.ensureCast("model", str)) # BMW 230, Ford Edge
+# if we prefer None
+jdict.optional_get("name", str)  # "John"
+jdict.optional_get("name", int)  # None
+jdict.optional_get("address", str)  # None
+jdict.optional_get("address.street", str)  # KeyError: address not found
+jdict.optional_get("address?.street", str)  # None
+jdict.optional_get("cars[2].mpg", str)  # IndexError: out of range
+jdict.optional_get("cars[2]?.mpg", str)  # None
 
-# chaining
-chain = jdict.chain()
-print(chain.ensureCast("cars[1].mpg", str))  # "24.1"
-print(chain.ensureCast("cars[2].mpg", str))  # ""
-# or via direct access (returns Optional[Any]!)
-print(chain["cars[2].mpg"])  # IndexError
-print(chain["cars[2]?.mpg"])  # None
+# if we don't care whether it exists or not
+jdict.ensure("name", str)  # "John"
+jdict.ensure("name", int)  # 0, because name is not an int
+jdict.ensure("age", int)  # 30
+jdict.ensure("age", str)  # "", because age is not a string
+jdict.ensure("address", str, "moon")  # "moon"
+jdict.ensure("cars[].model", list)  # [ "BMW 230", "Ford Edge" ]
+jdict.ensure("cars[0].mpg", float)  # 27.5
+jdict.ensure("cars[0].mpg", int)  # 0, because cars[0].model is not an int
 
-# schema validation
+# or cast to the desired type
+jdict.ensure_cast("cars[0].mpg", int) # 27
+```
+
+Similar rules apply when working with lists:
+```py
+from pyaddict import JList
+
+data = [{"name": "John", "age": 20}, {"name": "Jane", "age": 22}]
+
+jlist = JList(data)
+
+jlist.expect(0, dict)  # {"name": "John", "age": 20}
+jlist.expect(0, int)  # TypeError: item is dict, not int
+jlist.expect(2, dict)  # IndexError: out of range
+jlist.expect("0.name", str)  # ValueError: invalid int
+
+# if we enable chaining:
+jlist = JList(data).chain()
+jlist.expect("0.name", str)  # "John"
+jlist.expect("[].name", list)  # ["John", "Jane"]
+```
+
+### Validating json data
+```py
+from pyaddict.schema import Anything, Array, Integer, Object, OneOf, String
+
 schema = Object({
     "name": String(),
-    "age": String().coerce(),
-    "dogs": Array(String()).min(1).optional()
-}).withAdditionalProperties()
-print(schema.error(jdict)) # None
-
-badSchema = Object({
-    "name": String().min(5),
-    "age": Float(),
-    "cars": Object()
+    "age": Integer().coerce(),
+    "dogs": Array(
+        OneOf(
+            String(),
+            Object({}, additional_properties=True)
+        )
+    ).min(1).optional(),
+    "wildcard": Anything(),
+    "valid": True
 })
-print(badSchema.error(jdict)) # ValidationError(expected 4 to be greater than or equal to 5, name: min)
 
-staticSchema = Object({
+result = schema.validate({
     "name": "John",
-    "age": 30,
-    "cars": [
-        {"model": "BMW 230", "mpg": 27.5},
-        {"model": "Ford Edge", "mpg": 24.1}
-    ]
+    "age": 20.0,
+    "wildcard": [1, 2, 3],
+    "valid": True
 })
-print(staticSchema.error(jdict)) # None
+result.valid  # True
+result.unwrap()  # { "name": "John", "age": 20, "wildcard": [1, 2, 3], "valid": True }
 
-mixedSchema = Object({
-    "name": String().enum("John"),
-    "age": 30,
-    "dogs": Array(String()).min(1).optional()
-}).withAdditionalProperties()
-print(mixedSchema.error(jdict)) # None
+result = schema.validate({
+    "name": "John",
+    "age": 5,
+    "dogs": 1,
+    "wildcard": True,
+    "valid": True
+})
+result.valid  # False
+result.unwrap()  # ValueError (invalid)
+result.error  # 'dogs' should be list, not int
 ```
 
 The library is fully typed and thus can be used with mypy & pylint. Check out the [wiki](https://github.com/dxstiny/pyaddict/wiki) for more information.
-
-## When to use
-When working with json data, it is common to have to deal with missing keys, wrong types, etc. This library provides a simple way to deal with these issues. Additionally, it provides easy-to-use typing support for mypy and pylint and detailed documentation.
-Starting with version 1.0.0, pyaddict includes a schema validation feature inspired by [zod](https://github.com/colinhacks/zod). It is especially useful when validating user input, e.g. in web applications.
 
 ## License
 [MIT](LICENSE)

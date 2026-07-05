@@ -1,0 +1,39 @@
+on:
+    push:
+    workflow_dispatch:
+
+jobs:
+    ruff:
+        timeout-minutes: 10
+        runs-on: ubuntu-slim
+        steps:
+            - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  persist-credentials: false
+            - name: "Install uv"
+              uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+              with:
+                  version: "0.11.25"
+            - run: uvx ruff check .
+
+    ty:
+        timeout-minutes: 10
+        runs-on: ubuntu-slim
+        steps:
+            - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  persist-credentials: false
+            - name: "Install uv"
+              uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+              with:
+                  version: "0.11.25"
+            - run: uv sync --group dev
+            - run: uvx ty check .
+
+    typos:
+        runs-on: ubuntu-slim
+        steps:
+            - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+              with:
+                  persist-credentials: false
+            - uses: crate-ci/typos@37bb98842b0d8c4ffebdb75301a13db0267cef89 # v1.47.2
