@@ -62,3 +62,25 @@ def test_modify_schema() -> None:
     schema["second"] = Integer()
     assert not schema.validate({"first": 1})
     assert schema.validate({"first": 1, "second": 2})
+
+
+def test_unwrapped_value() -> None:
+    schema = Object(
+        {"name": String().optional().nullable().default("Alex")},
+        additional_properties=True,
+    )
+    result = schema.validate({"age": 5})
+    assert result
+
+    data = result.unwrap()
+    assert isinstance(data, dict)
+    assert data["name"] == "Alex"
+    assert data["age"] == 5
+
+    result = schema.validate({"name": None, "age": 5})
+    assert result
+
+    data = result.unwrap()
+    assert isinstance(data, dict)
+    assert data["name"] == "Alex"
+    assert data["age"] == 5

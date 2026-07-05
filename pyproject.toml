@@ -9,6 +9,13 @@ authors = [
 requires-python = ">=3.14"
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/davidohnee/pyaddict"
+Documentation = "https://github.com/davidohnee/pyaddict/wiki"
+Repository = "https://github.com/davidohnee/pyaddict.git"
+Issues = "https://github.com/davidohnee/pyaddict/issues"
+Changelog = "https://github.com/davidohnee/pyaddict/blob/main/CHANGELOG.md"
+
 [build-system]
 requires = ["uv_build>=0.9.26,<0.10.0"]
 build-backend = "uv_build"
