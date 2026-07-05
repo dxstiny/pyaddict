@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - new `Anything()` schema, which allows any value
   - ValidationResult now supports `.value`, which contains the validated data if valid or None otherwise
 - JList/JDict chains:
+  - can be initialised with `chainable: bool` (in addition to `chain()`)
   - now supports `[]`, follow the chain for every item and will return a list
 - JDict:
   - new `unchain()` to disable chaining
@@ -23,8 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - `optionalGet()` -> `optional_get()`
   - `assertGet()` -> `expect()`
 - Schema
-  - `optional()` no longer modifies `nullable`, use `.nullable().optional()` instead
-  - `default()` no longer modifies `nullable`, use `.nullable().default()` instead
+  - `optional()` no longer modifies `nullable`, use `nullable().optional()` instead
+  - `default()` no longer modifies `nullable`, use `nullable().default()` instead
   - `min()` / `max()`: inclusive is now a named parameter
 
 ### Removed
