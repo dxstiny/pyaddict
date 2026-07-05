@@ -4,6 +4,46 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-07-05
+
+### Added
+
+- Schema
+  - new `Anything()` schema, which allows any value
+  - ValidationResult now supports `.value`, which contains the validated data if valid or None otherwise
+- JList/JDict chains:
+  - now supports `[]`, follow the chain for every item and will return a list
+- JDict:
+  - new `unchain()` to disable chaining
+
+### Changed
+- now uses snake_case
+- JDict / JList:
+  - `ensureCast()` -> `ensure_cast()`
+  - `optionalGet()` -> `optional_get()`
+  - `assertGet()` -> `expect()`
+- Schema
+  - `optional()` no longer modifies `nullable`, use `.nullable().optional()` instead
+  - `default()` no longer modifies `nullable`, use `.nullable().default()` instead
+  - `min()` / `max()`: inclusive is now a named parameter
+
+### Removed
+
+- Schema
+  - removed `valid()`
+  - removed `error()`
+  - removed `expect()`
+  - no longer directly callable (i.e. `schema(data)`)
+- JDict / JList
+  - removed `optionalCast()` (prefer `ensure_cast()`)
+  - removed `fromString()`
+  - removed `fromFile()`
+  - removed `toString()`
+- JList
+  - removed `iterator()`, use the new chain syntax instead
+
+### Fixed
+
 ## [1.2.2] - 2025-09-11
 
 ### Fixed
