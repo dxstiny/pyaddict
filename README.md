@@ -115,10 +115,10 @@ result.unwrap()  # ValueError (invalid)
 result.error  # 'dogs' should be list, not int
 ```
 
-The library is fully typed and thus can be used with mypy & pylint. Check out the [wiki](https://github.com/dxstiny/pyaddict/wiki) for more information.
+The library is fully typed and thus can be used with mypy & pylint. Check out the [wiki](https://github.com/davidohnee/pyaddict/wiki) for more information.
 
 ## License
 [MIT](LICENSE)
 
 ## Author
-[dxstiny](https://github.com/dxstiny)
+[davidohnee](https://github.com/davidohnee)
