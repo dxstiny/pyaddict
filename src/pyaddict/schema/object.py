@@ -11,6 +11,8 @@ from pyaddict.schema.base import (
 from pyaddict.schema.common import validate
 from pyaddict.schema.result import ValidationError, ValidationResult
 
+ObjectBodyDefinition = dict[str, Validatable]
+
 
 class _CoerceObjectTest(ISchemaTest):
     def __init__(self, coerce: bool) -> None:
@@ -47,7 +49,7 @@ class _CoerceObjectTest(ISchemaTest):
 class _Object[R](ISchemaType["_Object[R]", R]):
     def __init__(
         self,
-        body: dict[str, Validatable] | None = None,
+        body: ObjectBodyDefinition | None = None,
         *,
         additional_properties: bool = False,
     ) -> None:
@@ -149,3 +151,11 @@ class _Object[R](ISchemaType["_Object[R]", R]):
 
 Object = _Object[dict[str, Any]]
 OptionalObject = _Object[dict[str, Any] | None]
+
+
+class AnyObject(Object):
+    """Any object. This is the same as Object({}).with_additional_properties()."""
+
+    def __init__(self) -> None:
+        """Create new Object schema."""
+        super().__init__({}, additional_properties=True)

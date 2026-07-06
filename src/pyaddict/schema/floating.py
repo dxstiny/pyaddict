@@ -9,7 +9,7 @@ from pyaddict.schema.base import (
     RangePoint,
     RangePointType,
 )
-from pyaddict.schema.common import RangeSchemaTest
+from pyaddict.schema.common import EnumSchemaTest, RangeSchemaTest
 from pyaddict.schema.result import ValidationError, ValidationResult
 
 
@@ -48,6 +48,7 @@ class _Float[R](ISchemaType["_Float[R]", R]):
     def __init__(self) -> None:
         super().__init__()
         self._range = Range[float]()
+        self._enum: set[R] = set()
 
     def min(self, val: float, *, inclusive: bool = True) -> "_Float[R]":
         self._range.min = RangePoint(val, RangePointType.is_inclusive(inclusive))
@@ -55,6 +56,10 @@ class _Float[R](ISchemaType["_Float[R]", R]):
 
     def max(self, val: float, *, inclusive: bool = True) -> "_Float[R]":
         self._range.max = RangePoint(val, RangePointType.is_inclusive(inclusive))
+        return self
+
+    def enum(self, *values: R) -> "_Float[R]":
+        self._enum = set(values)
         return self
 
     def nullable(self) -> "_Float[float | None]":
@@ -77,7 +82,7 @@ class _Float[R](ISchemaType["_Float[R]", R]):
         if not result:
             return cast(ValidationResult[R], result)
 
-        for test in [RangeSchemaTest(self._range)]:
+        for test in [RangeSchemaTest(self._range), EnumSchemaTest(self._enum)]:
             result.update(test.test(result.unwrap_or(value), path))
 
         return cast(ValidationResult[R], result)

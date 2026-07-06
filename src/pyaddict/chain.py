@@ -5,7 +5,6 @@ from typing import Any
 
 
 class ChainLink:
-
     """chain link."""
 
     __slots__ = ("_key", "_optional", "_index", "_create_array")

@@ -1,4 +1,4 @@
-from . import Integer, Object, String
+from . import AnyObject, Integer, Object, String
 
 
 def test_do_not_coerce() -> None:
@@ -40,6 +40,22 @@ def test_items() -> None:
     assert schema.validate({"1": 2})
     assert not schema.validate({"1": 2, "optional": None})
     assert schema.validate({"1": 2, "optional": 5})
+
+
+def test_any_object() -> None:
+    schema = AnyObject()
+    assert schema.validate({})
+    assert not schema.validate(None)
+    assert not schema.validate(5)
+    assert schema.validate({"test": "value"})
+
+
+def test_static() -> None:
+    schema = Object({"1": 1, "null": None, "test": "test"})
+    assert schema.validate({"1": 1, "null": None, "test": "test"})
+    assert not schema.validate({"1": "1", "null": None, "test": "test"})
+    assert not schema.validate({"1": 1, "null": "None", "test": "test"})
+    assert not schema.validate({"1": 1, "null": None, "test": 5})
 
 
 def test_default_items() -> None:
