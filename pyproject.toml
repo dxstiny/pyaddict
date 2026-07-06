@@ -5,7 +5,7 @@ description = "yet another dict library"
 readme = "README.md"
 license = { file="LICENSE" }
 authors = [
-    { name = "davidohnee", email = "dxstiny.gh@gmail.com" }
+    { name = "davidohnee", email = "davidohnee@gmail.com" }
 ]
 requires-python = ">=3.14"
 classifiers = [
