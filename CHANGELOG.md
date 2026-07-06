@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-07-06
+
+### Added
+
+- Schema
+  - new `AnyObject` (syntactic sugar for `Object().with_additional_properties()`)
+  - new type `ObjectBodyDefinition` for your type hints
+
+### Fixed
+
+- Schema
+  - `Validatable`
+    - now available from `pytest.schema`
+    - includes `None`, meaning you can now include static `None` values in your schemas
+  - `Integer` / `Float`
+    - added missing `enum`
+
 ## [2.0.0] - 2026-07-05
 
 ### Added
@@ -11,17 +28,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Schema
   - new `Anything()` schema, which allows any value
   - ValidationResult now supports `.value`, which contains the validated data if valid or None otherwise
-- JList/JDict chains:
+- JList/JDict chains
   - can be initialised with `chainable: bool` (in addition to `chain()`)
   - now supports `[]`, follow the chain for every item and will return a list
-- JDict:
+- JDict
   - new `unchain()` to disable chaining
 
 ### Changed
 
 - Changed licence from MPL-2.0 to MIT
 - now uses snake_case
-- JDict / JList:
+- JDict / JList
   - `ensureCast()` -> `ensure_cast()`
   - `optionalGet()` -> `optional_get()`
   - `assertGet()` -> `expect()`
@@ -29,8 +46,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - `optional()` no longer modifies `nullable`, use `nullable().optional()` instead
   - `default()` no longer modifies `nullable`, use `nullable().default()` instead
   - `min()` / `max()`: inclusive is now a named parameter
-  - Object:
-    - `withAdditionalProperties()` -> `with_additional_properties()`
+  - `Object`:
+    - `withAdditionalProperties(additionalProperties: bool)` -> `with_additional_properties()`
+  - `ValidationResult`:
+    - `valid()` -> `valid`
 
 ### Removed
 
@@ -39,6 +58,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - removed `error()`
   - removed `expect()`
   - no longer directly callable (i.e. `schema(data)`)
+  - `Boolean`:
+    - removed `.enum()`; use static definitions (i.e. `True` / `False`) instead.
 - JDict / JList
   - removed `optionalCast()` (prefer `ensure_cast()`)
   - removed `fromString()`

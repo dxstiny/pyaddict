@@ -7,7 +7,6 @@ from pyaddict.common import JArray
 
 
 class JList(list):
-
     """Type-safe list helper."""
 
     __slots__ = ("_data", "_chainable")

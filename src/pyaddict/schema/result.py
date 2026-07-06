@@ -10,7 +10,6 @@ U = TypeVar("U")
 
 
 class ValidationState(Enum):
-
     """Validation state."""
 
     Valid = 0
@@ -18,7 +17,6 @@ class ValidationState(Enum):
 
 
 class ValidationError(ValueError):
-
     """Validation error."""
 
     __slots__ = ("_message", "_path", "_validation", "_cause")
@@ -105,7 +103,6 @@ class ValidationError(ValueError):
 
 
 class ValidationResult(Generic[T]):
-
     """Validation result wrapper."""
 
     __slots__ = ("_state", "_data", "_error", "_nullable")

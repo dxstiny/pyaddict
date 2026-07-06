@@ -9,7 +9,6 @@ from pyaddict.schema.result import ValidationError, ValidationResult
 
 
 class ISchemaType[C, T](ABC):
-
     """Abstract schema base."""
 
     def __init__(self) -> None:
@@ -117,11 +116,10 @@ class ISchemaType[C, T](ABC):
 
 SchemaType = ISchemaType[Any, Any]
 Primitive = int | float | bool | str | dict | list
-Validatable = SchemaType | Primitive
+Validatable = SchemaType | Primitive | None
 
 
 class RangePointType(Enum):
-
     """Range point type."""
 
     EXCLUSIVE = 1
@@ -143,7 +141,6 @@ class RangePointType(Enum):
 
 @dataclass
 class RangePoint[T: (int, float)]:
-
     """Range point definition."""
 
     point: T
@@ -152,7 +149,6 @@ class RangePoint[T: (int, float)]:
 
 @dataclass
 class Range[T: (int, float)]:
-
     """Range specification."""
 
     min: RangePoint[T] | None = None
@@ -160,7 +156,6 @@ class Range[T: (int, float)]:
 
 
 class ISchemaTest(ABC):
-
     """Abstract base for validation tests."""
 
     @abstractmethod

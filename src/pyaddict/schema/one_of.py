@@ -8,7 +8,6 @@ from pyaddict.schema.result import ValidationError, ValidationResult
 
 
 class OneOf(ISchemaType["OneOf", Any | None]):
-
     """The value must match any of the provided schemas."""
 
     def __init__(self, *schemas: Validatable) -> None:

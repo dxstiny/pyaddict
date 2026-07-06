@@ -13,7 +13,6 @@ from pyaddict.schema.result import ValidationError, ValidationResult
 
 
 class EnumSchemaTest[R](ISchemaTest):
-
     """Enum schema test."""
 
     def __init__(self, items: set[R]) -> None:
@@ -37,7 +36,6 @@ class EnumSchemaTest[R](ISchemaTest):
 
 
 class RangeSchemaTest(ISchemaTest):
-
     """Range schema test."""
 
     def __init__(self, range: Range | None = None) -> None:
@@ -119,6 +117,12 @@ def validate(
         ValidationResult.
 
     """
+    if schema is None:
+        if val is None:
+            return ValidationResult.ok(val)
+        return ValidationResult.err(
+            ValidationError(f"expected {val} to be None", path, "equals")
+        )
     if isinstance(schema, ISchemaType):
         return schema.validate(val, path=path)
     if val == schema:

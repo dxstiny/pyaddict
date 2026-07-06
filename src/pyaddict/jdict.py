@@ -7,7 +7,6 @@ from pyaddict.common import JObject
 
 
 class JDict(dict):
-
     """Type-safe dict helper."""
 
     __slots__ = ("_data", "_chainable")
