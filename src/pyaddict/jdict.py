@@ -95,7 +95,6 @@ class JDict(dict):
         """
         try:
             value = self._get_item(key)
-            print(value)
             if isinstance(value, type_):
                 return value
             return default or type_()
