@@ -81,7 +81,9 @@ class JDict(dict):
         value = self._get_item(key, optional=True)
         if type_ and not isinstance(value, type_):
             return default
-        return value or default
+        if value is None:
+            return default
+        return value
 
     def ensure[T](self, key: str, type_: type[T], default: T | None = None) -> T:
         """
