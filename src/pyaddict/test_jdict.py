@@ -2,7 +2,7 @@ import pytest
 
 from pyaddict.jdict import JDict
 
-data = {"a": {"b": [{"c": 1}, {"c": 2}]}}
+data = {"a": {"b": [{"c": 1}, {"c": 2}]}, "false-ish": 0}
 
 
 def test_no_chain() -> None:
@@ -35,6 +35,7 @@ def test_ensure() -> None:
     assert jdata.ensure("a.b", str) == ""
     assert jdata.ensure("a.b.[0].c", str) == ""
     assert jdata.ensure("a.b.[0].c", int) == 0
+    assert jdata.ensure("false-ish", int) == 0
 
 
 def test_chain_ensure_cast() -> None:
@@ -46,6 +47,7 @@ def test_chain_ensure_cast() -> None:
     assert jdata.ensure_cast("a.b[0].c", str) == "1"
     assert jdata.ensure_cast("a.b[0].c", int) == 1
     assert jdata.ensure_cast("a.b[0].c", float) == 1.0
+    assert jdata.ensure_cast("false-ish", int) == 0
 
 
 def test_chain_ensure() -> None:
@@ -61,6 +63,7 @@ def test_chain_ensure() -> None:
     assert jdata.ensure("c?.b.d", str) == ""
     assert jdata.ensure("c?.b?.d", dict, {"a": "b"}) == {"a": "b"}
     assert jdata.ensure("c.b?.d", str) == ""
+    assert jdata.ensure("false-ish", int) == 0
 
 
 def test_optional_get() -> None:
@@ -69,6 +72,7 @@ def test_optional_get() -> None:
     assert jdata.optional_get("c", str) is None
     assert jdata.optional_get("b", str) is None
     assert jdata.optional_get("a.b", str) is None
+    assert jdata.optional_get("false-ish", int) == 0
 
 
 def test_chain_optional_get() -> None:
@@ -84,6 +88,7 @@ def test_chain_optional_get() -> None:
     assert jdata.optional_get("c?.b?.d", dict) is None
     with pytest.raises(KeyError):
         assert jdata.optional_get("c.b?.d", str) is None
+    assert jdata.optional_get("false-ish", int) == 0
 
 
 def test_expect() -> None:
@@ -95,6 +100,7 @@ def test_expect() -> None:
         assert jdata.expect("b", str) is None
     with pytest.raises(KeyError):
         assert jdata.expect("a.b", str) is None
+    assert jdata.expect("false-ish", int) == 0
 
 
 def test_chain_expect() -> None:
@@ -118,3 +124,4 @@ def test_chain_expect() -> None:
         assert jdata.expect("c?.b?.d", dict) is None
     with pytest.raises(KeyError):
         assert jdata.expect("c.b?.d", str) is None
+    assert jdata.expect("false-ish", int) == 0
