@@ -17,7 +17,7 @@ class JDict(dict):
         self._chainable = chainable
         super().__init__(self._data)
 
-    def _get_item(self, key: str, *, optional: bool = False) -> None:
+    def _get_item(self, key: str, *, optional: bool = False) -> Any | None:
         if self._chainable:
             return traverse(
                 self._data, ChainLink.create_chain(key, last_optional=optional)
@@ -59,9 +59,36 @@ class JDict(dict):
         self, key: str, type_: type[T], default: T | None = None
     ) -> T | None: ...
 
-    def optional_get[T](
-        self, key: str, type_: type[T] | None = None, default: T | None = None
-    ) -> Any | T | None:
+    @overload
+    def optional_get[V](
+        self,
+        key: str,
+        type_: type[list],
+        default: list[V] | None = None,
+        *,
+        value_type: type[V],
+    ) -> list[V | None] | None: ...
+
+    @overload
+    def optional_get[K, V](
+        self,
+        key: str,
+        type_: type[dict],
+        default: dict[K, V] | None = None,
+        *,
+        key_type: type[K],
+        value_type: type[V],
+    ) -> dict[K, V | None] | None: ...
+
+    def optional_get[T, K, V](
+        self,
+        key: str,
+        type_: type[T] | None = None,
+        default: T | None = None,
+        *,
+        key_type: type[K] | None = None,
+        value_type: type[V] | None = None,
+    ) -> Any | None:
         """
         Get the value if it matches the target type.
 
@@ -83,9 +110,55 @@ class JDict(dict):
             return default
         if value is None:
             return default
+
+        if isinstance(value, list) and value_type is not None:
+            return [x if isinstance(x, value_type) else None for x in value]
+
+        if isinstance(value, dict) and value_type is not None and key_type is not None:
+            return {
+                k: v if isinstance(v, value_type) else None
+                for k, v in value.items()
+                if isinstance(k, key_type)
+            }
+
         return value
 
-    def ensure[T](self, key: str, type_: type[T], default: T | None = None) -> T:
+    @overload
+    def ensure[T](self, key: str, type_: type[T]): ...
+
+    @overload
+    def ensure[T](self, key: str, type_: type[T], default: T): ...
+
+    @overload
+    def ensure[V](
+        self,
+        key: str,
+        type_: type[list],
+        default: list[V] | None = None,
+        *,
+        value_type: type[V],
+    ): ...
+
+    @overload
+    def ensure[K, V](
+        self,
+        key: str,
+        type_: type[dict],
+        default: dict[K, V] | None,
+        *,
+        key_type: type[K],
+        value_type: type[V],
+    ): ...
+
+    def ensure[T, K, V](
+        self,
+        key: str,
+        type_: type[T],
+        default: T | None = None,
+        *,
+        key_type: type[K] | None = None,
+        value_type: type[V] | None = None,
+    ) -> Any:
         """
         Get the value if it matches the target type.
 
@@ -98,12 +171,60 @@ class JDict(dict):
         try:
             value = self._get_item(key)
             if isinstance(value, type_):
+                if isinstance(value, list) and value_type is not None:
+                    return [x for x in value if isinstance(x, value_type)]
+                if (
+                    isinstance(value, dict)
+                    and value_type is not None
+                    and key_type is not None
+                ):
+                    return {
+                        k: v
+                        for k, v in value.items()
+                        if isinstance(k, key_type) and isinstance(v, value_type)
+                    }
+
                 return value
             return default or type_()
         except:  # noqa: E722
             return default or type_()
 
-    def ensure_cast[T](self, key: str, type_: type[T], default: T | None = None) -> T:
+    @overload
+    def ensure_cast[T](self, key: str, type_: type[T]): ...
+
+    @overload
+    def ensure_cast[T](self, key: str, type_: type[T], default: T): ...
+
+    @overload
+    def ensure_cast[V](
+        self,
+        key: str,
+        type_: type[list],
+        default: list[V] | None = None,
+        *,
+        value_type: type[V],
+    ): ...
+
+    @overload
+    def ensure_cast[K, V](
+        self,
+        key: str,
+        type_: type[dict],
+        default: dict[K, V] | None,
+        *,
+        key_type: type[K],
+        value_type: type[V],
+    ): ...
+
+    def ensure_cast[T, K, V](
+        self,
+        key: str,
+        type_: type[T],
+        default: T | None = None,
+        *,
+        key_type: type[K] | None = None,
+        value_type: type[V] | None = None,
+    ) -> T:
         """
         Get the value and try to cast it to the target type.
 
@@ -118,7 +239,27 @@ class JDict(dict):
         except:  # noqa: E722
             return default or type_()
 
-    def expect[T](self, key: str, type_: type[T]) -> T:
+    @overload
+    def expect[T](self, key: str, type_: type[T]) -> T: ...
+
+    @overload
+    def expect[V](
+        self, key: str, type_: type[list], *, value_type: type[V]
+    ) -> list[V]: ...
+
+    @overload
+    def expect[K, V](
+        self, key: str, type_: type[dict], *, key_type: type[K], value_type: type[V]
+    ) -> dict[K, V]: ...
+
+    def expect[T, K, V](
+        self,
+        key: str,
+        type_: type[T],
+        *,
+        key_type: type[K] | None = None,
+        value_type: type[V] | None = None,
+    ) -> T:
         """
         Expect the value to be present and of the specified type.
 

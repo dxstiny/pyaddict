@@ -125,3 +125,9 @@ def test_chain_expect() -> None:
     with pytest.raises(KeyError):
         assert jdata.expect("c.b?.d", str) is None
     assert jdata.expect("false-ish", int) == 0
+
+
+def test_get_list_with_checked_items() -> None:
+    jdata = JDict({"mylist": ["apple", "banana", 1, 2, 3]})
+    mylist = jdata.optional_get("mylist", list, value_type=str)
+    assert mylist == ["apple", "banana", None, None, None]
